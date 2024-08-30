@@ -1,9 +1,16 @@
 package table
 
+import "time"
+
 type Rating struct {
-	Id      *uint64  `gorm:"primary_key"`
-	OwnerId *uint64  `gorm:"not null"`
-	Rating  *float64 `gorm:"not null"`
-	Score   *uint64  `gorm:"not null"`
-	NumRate *uint64  `gorm:"not null"`
+	RatingId   *uint64    `gorm:"primaryKey;autoIncrement"`
+	GiverId    *uint64    `gorm:"not null"` // FK ชี้ไปที่ User ที่ให้ rating
+	Giver      *User      `gorm:"foreignKey:GiverId;references:UserId"`
+	ReceiverId *uint64    `gorm:"not null"` // FK ชี้ไปที่ User ที่ได้รับ rating
+	Receiver   *User      `gorm:"foreignKey:ReceiverId;references:UserId"`
+	Rating     *float64   `gorm:"not null"`
+	Score      *uint64    `gorm:"not null"`
+	NumRate    *uint64    `gorm:"not null"`
+	CreatedAt  *time.Time `gorm:"precision:6"`
+	UpdatedAt  *time.Time `gorm:"precision:6"`
 }
