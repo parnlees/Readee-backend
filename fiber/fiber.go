@@ -2,6 +2,7 @@ package fiber
 
 import (
 	cc "Readee-Backend/common"
+	service "Readee-Backend/services"
 	"fmt"
 
 	fiber "github.com/gofiber/fiber/v2"
@@ -18,6 +19,9 @@ func Init() {
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("hello world 🌈")
 	})
+
+	app.Get("/genres", service.GetGenres)
+	app.Get("/genres/:genre_id", service.GetGenreByID)
 
 	//cc.App = app
 
