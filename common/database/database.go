@@ -3,6 +3,8 @@ package database
 import (
 	cc "Readee-Backend/common"
 	"Readee-Backend/type/table"
+	"log"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -24,6 +26,8 @@ func Init() {
 
 	if err != nil {
 		panic("failed to connect database")
+	} else {
+		log.Println("connect to database success")
 	}
 
 	// ลบตารางทั้งหมด
