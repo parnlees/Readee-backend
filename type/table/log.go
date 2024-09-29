@@ -6,5 +6,6 @@ type Log struct {
 	Book       *Book   `gorm:"foreignKey:BookLikeId; reference:BookId"`
 	UserId     *uint64 `gorm:"not null"`                            // User ที่ถูกใจหนังสือ
 	User       *User   `gorm:"foreignKey:UserId;references:UserId"` // สอดคล้องกับ UserId
+	
 	Liked      *bool   `gorm:"default:false"`
 }

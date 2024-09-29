@@ -16,10 +16,17 @@ func Init() {
 
 	// Set up the basic route
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("hello world 🌈")
+		return c.SendString("hello world 🌈") //string
 	})
 
-	//cc.App = app
+	//JSON
+	app.Get("/info", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"msg":  "welcome to Readee 🌈",
+			"bool": true,
+			"int":  123,
+		})
+	})
 
 	// Start the Fiber application
 	err := app.Listen(*cc.Config.Address)
