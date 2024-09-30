@@ -119,24 +119,3 @@ type Room struct {
 
 	Messages []*Message `gorm:"foreignKey:RoomId"`
 }
-
-// Helper function to convert string to *string
-func ptrString(s string) *string {
-	return &s
-}
-
-// Helper function to convert uint64 to *uint64
-func ptrUint64(i uint64) *uint64 {
-	return &i
-}
-
-// Helper function to convert bool to *bool
-func ptrBool(b bool) *bool {
-	return &b
-}
-
-// Mock-up Users
-// var users = []*User{
-// 	{UserId: ptrUint64(1), Token: ptrString("token123"), Email: ptrString("user1@example.com"), Username: ptrString("userone"), Password: ptrString("password123"), PhoneNumber: ptrString("123-456-7890"), ProfileUrl: ptrString("https://example.com/profiles/user1.png"), Firstname: ptrString("John"), Lastname: ptrString("Doe"), Gender: ptrString("Male"), VerifyStatus: ptrBool(true), CreatedAt: &time.Time{}, UpdatedAt: &time.Time{}},
-// 	{UserId: ptrUint64(2), Token: ptrString("token456"), Email: ptrString("user2@example.com"), Username: ptrString("usertwo"), Password: ptrString("password456"), PhoneNumber: ptrString("098-765-4321"), ProfileUrl: ptrString("https://example.com/profiles/user2.png"), Firstname: ptrString("Jane"), Lastname: ptrString("Smith"), Gender: ptrString("Female"), VerifyStatus: ptrBool(true), CreatedAt: &time.Time{}, UpdatedAt: &time.Time{}},
-// }

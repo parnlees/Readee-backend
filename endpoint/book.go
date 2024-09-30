@@ -2,23 +2,37 @@ package endpoint
 
 import (
 	//"Readee-backend/endpoint"
+	"Readee-Backend/common/database"
+	"Readee-Backend/type/table"
+	"log"
+
 	"github.com/gofiber/fiber/v2"
 )
 
-var book Book
-
 // Create Book
 func CreateBook(c *fiber.Ctx) error {
+	var book table.Book
+
 	if err := c.BodyParser(&book); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
-	//books = append(books, book)
-	return c.JSON(book)
+	if err := database.DB.Create(&book).Error; err != nil {
+		log.Println("Error creating book: %v", err) // Log the error
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create book"})
+	}
+	return c.Status(201).JSON(book)
 }
 
 // Get Book
 func GetBook(c *fiber.Ctx) error {
-	//id, _ := strconv.Atoi(c.Params("id"))
-	//return c.JSON(books[id])
+	var book table.Book
+	bookId := c.Params("id")
+
+	// Find the book by ID
+	if err := database.DB.First(&book, bookId).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Book not found"})
+	}
+
+	// Return the book details as JSON
 	return c.JSON(book)
 }

@@ -13,7 +13,7 @@ func RegisterRoutes(app *fiber.App) {
 	// Register book-related routes
 	// Book
 	app.Post("/createBook", CreateBook)
-	app.Get("/getBook", GetBook)
+	app.Get("/getBook/:bookId", GetBook)
 
 	// Register matching-related routes
 	// Add your matching routes here
