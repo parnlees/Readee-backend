@@ -1,17 +1,22 @@
 package endpoint
 
 import (
-	//"os/user"
+	"Readee-Backend/common/database"
+	"Readee-Backend/type/table"
 	"strconv"
-	//"Readee-backend/endpoint"
+
 	"github.com/gofiber/fiber/v2"
-	//myTypes"Readee-backend/common/database"
 )
 
-// Add your User struct and mock data here (same as in your current code)
-
 func GetUsers(c *fiber.Ctx) error {
-	return c.JSON(users)
+	var users []table.User // Use the correct User model from your table package
+
+	// Query the database to get all users
+	if err := database.DB.Find(&users).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve users"})
+	}
+
+	return c.JSON(users) // Return the users as JSON
 }
 
 func GetUser(c *fiber.Ctx) error {
@@ -20,11 +25,11 @@ func GetUser(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
 	}
 
-	for _, user := range users {
-		if *user.UserId == userId {
-			return c.JSON(user)
-		}
+	var user table.User
+	// Find user by userId
+	if err := database.DB.First(&user, userId).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+	return c.JSON(user)
 }

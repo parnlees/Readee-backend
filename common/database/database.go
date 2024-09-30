@@ -10,28 +10,15 @@ import (
 	"gorm.io/gorm"
 )
 
-// const (
-// 	host     = "server2.bsthun.com" // or the Docker service name if running in another container
-// 	port     = 4004                 // default PostgreSQL port
-// 	user     = "parn"               // as defined in docker-compose.yml
-// 	password = "parn1234"           // as defined in docker-compose.yml
-// 	dbname   = "poc2"               // as defined in docker-compose.yml
-// )
-
 var DB *gorm.DB
 
 func Init() {
-	//dsn := fmt.Sprintf("host=%s port=%d user=%s "+
-	//	"password=%s dbname=%s sslmode=disable",
-	//	host, port, user, password, dbname)
-
-	dsn2 := "parn:parn1234@tcp(server2.bsthun.com:4004)/poc2"
+	dsn2 := "parn:parn1234@tcp(server2.bsthun.com:4004)/poc2?charset=utf8mb4&parseTime=true&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn2), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	} else {
 		log.Println("connect to database success")
-		// How to export db to other package
 
 		DB = db
 
