@@ -20,9 +20,7 @@ type User struct {
 	CreatedAt    *time.Time `gorm:"precision:6"`
 	UpdatedAt    *time.Time `gorm:"precision:6"`
 
-	Books  []*Book  `gorm:"foreignKey:OwnerId"`
 	Genres []*Genre `gorm:"many2many:user_genres;"`
-	Logs   []*Log   `gorm:"foreignKey:UserId"`
 }
 
 type Book struct {
@@ -37,8 +35,6 @@ type Book struct {
 	IsTraded        *bool      `gorm:"default:true"`
 	CreatedAt       *time.Time `gorm:"precision:6"`
 	UpdatedAt       *time.Time `gorm:"precision:6"`
-
-	Logs []*Log `gorm:"foreignKey:BookLikeId"`
 }
 
 type Genre struct {
@@ -58,11 +54,12 @@ type History struct {
 }
 
 type Log struct {
+	//id
 	LogId      *uint64 `gorm:"primaryKey;autoIncrement"`
 	BookLikeId *uint64 `gorm:"not null"` // ใช้ BookId เป็น foreign key
-	Book       *Book   `gorm:"foreignKey:BookLikeId; reference:BookId"`
-	UserId     *uint64 `gorm:"not null"`                            // User ที่ถูกใจหนังสือ
-	User       *User   `gorm:"foreignKey:UserId;references:UserId"` // สอดคล้องกับ UserId
+	Book       *Book   `gorm:"foreignKey:BookLikeId; references:BookId"`
+	UserLikeId *uint64 `gorm:"not null"`                                // User ที่ถูกใจหนังสือ
+	User       *User   `gorm:"foreignKey:UserLikeId;references:UserId"` // สอดคล้องกับ UserId
 	Liked      *bool   `gorm:"default:false"`
 }
 

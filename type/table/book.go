@@ -5,6 +5,7 @@ import (
 )
 
 type Book struct {
+	//Id              *uint64    `gorm:"primaryKey;autoIncrement"`
 	BookId          *uint64    `gorm:"primaryKey;autoIncrement"`
 	OwnerId         *uint64    `gorm:"not null"`
 	Owner           *User      `gorm:"foreignKey:OwnerId;references:UserId"`
@@ -16,6 +17,4 @@ type Book struct {
 	IsTraded        *bool      `gorm:"default:true"`
 	CreatedAt       *time.Time `gorm:"precision:6"`
 	UpdatedAt       *time.Time `gorm:"precision:6"`
-
-	Logs []*Log `gorm:"foreignKey:BookLikeId"`
 }

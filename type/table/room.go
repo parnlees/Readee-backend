@@ -7,5 +7,5 @@ type Room struct {
 	ReceiverId *uint64 `gorm:"index"`
 	Receiver   *User   `gorm:"foreignKey:ReceiverId;references:UserId"`
 
-	Messages []*Message `gorm:"foreignKey:RoomId"`
+	//Messages []*Message `gorm:"foreignKey:RoomId"`
 }
