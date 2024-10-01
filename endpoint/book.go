@@ -33,20 +33,19 @@ func GetBookSpecific(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Book not found"})
 	}
 
-	// Return the book details as JSON
 	return c.JSON(book)
 }
 
 // Get all books
 func GetBooks(c *fiber.Ctx) error {
-	var books []table.Book // Use the correct Book model from your table package
+	var books []table.Book
 
 	// Query the database to get all books
 	if err := database.DB.Find(&books).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve users"})
 	}
 
-	return c.JSON(books) // Return the books as JSON
+	return c.JSON(books)
 }
 
 // Edit book information
@@ -70,6 +69,24 @@ func EditBook(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update book"})
 	}
 
-	// Return success response with the updated book
 	return c.Status(200).JSON(book)
+}
+
+// Delete book
+func DeleteBook(c *fiber.Ctx) error {
+	var book table.Book
+	BookId := c.Params("BookId")
+
+	// Check if the book exists
+	if err := database.DB.First(&book, "book_id = ?", BookId).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Book not found"})
+	}
+
+	// Delete the book by ID
+	if err := database.DB.Delete(&table.Book{}, "book_id = ?", BookId).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete book"})
+	}
+
+	// Return success response
+	return c.Status(200).JSON(fiber.Map{"message": "Book deleted successfully"})
 }

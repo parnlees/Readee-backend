@@ -14,6 +14,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getBook/:BookId", GetBookSpecific)
 	app.Get("/getBooks", GetBooks)
 	app.Patch("/editBook/:BookId", EditBook)
+	app.Delete("/deleteBook/:BookId", DeleteBook)
 
 	// Register matching-related routes
 	// Add your matching routes here
