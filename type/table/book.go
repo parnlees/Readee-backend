@@ -6,7 +6,7 @@ import (
 
 type Book struct {
 	//Id              *uint64    `gorm:"primaryKey;autoIncrement"`
-	BookId          *uint64    `gorm:"primaryKey;autoIncrement"`
+	BookId          *uint64    `gorm:"column:book_id;primaryKey;autoIncrement"`
 	OwnerId         *uint64    `gorm:"not null"`
 	Owner           *User      `gorm:"foreignKey:OwnerId;references:UserId"`
 	BookName        *string    `gorm:"type:VARCHAR(256);not null"`

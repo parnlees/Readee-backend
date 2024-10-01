@@ -48,3 +48,28 @@ func GetBooks(c *fiber.Ctx) error {
 
 	return c.JSON(books) // Return the books as JSON
 }
+
+// Edit book information
+func EditBook(c *fiber.Ctx) error {
+	var book table.Book
+	BookId := c.Params("BookId")
+
+	// Check if the book exists
+	if err := database.DB.First(&book, "book_id = ?", BookId).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Book not found"})
+	}
+
+	// Parse request body into the book struct
+	if err := c.BodyParser(&book); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Update the book information
+	if err := database.DB.Model(&book).Where("book_id = ?", BookId).Updates(&book).Error; err != nil {
+		log.Printf("Error updating book: %v", err) // Proper logging
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update book"})
+	}
+
+	// Return success response with the updated book
+	return c.Status(200).JSON(book)
+}
