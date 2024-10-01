@@ -23,8 +23,8 @@ func CreateBook(c *fiber.Ctx) error {
 	return c.Status(201).JSON(book)
 }
 
-// Get Book
-func GetBook(c *fiber.Ctx) error {
+// Get Book specific
+func GetBookSpecific(c *fiber.Ctx) error {
 	var book table.Book
 	BookId := c.Params("BookId")
 
@@ -35,4 +35,16 @@ func GetBook(c *fiber.Ctx) error {
 
 	// Return the book details as JSON
 	return c.JSON(book)
+}
+
+// Get all books
+func GetBooks(c *fiber.Ctx) error {
+	var books []table.Book // Use the correct Book model from your table package
+
+	// Query the database to get all books
+	if err := database.DB.Find(&books).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve users"})
+	}
+
+	return c.JSON(books) // Return the books as JSON
 }

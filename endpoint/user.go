@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// All
 func GetUsers(c *fiber.Ctx) error {
 	var users []table.User // Use the correct User model from your table package
 
@@ -19,7 +20,8 @@ func GetUsers(c *fiber.Ctx) error {
 	return c.JSON(users) // Return the users as JSON
 }
 
-func GetUser(c *fiber.Ctx) error {
+// Specific
+func GetUserSpecific(c *fiber.Ctx) error {
 	userId, err := strconv.ParseUint(c.Params("userId"), 10, 64)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
