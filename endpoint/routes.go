@@ -19,4 +19,7 @@ func RegisterRoutes(app *fiber.App) {
 	// Log
 	app.Post("/books/:bookId/like/:userId", LikeBook)
 	app.Post("/books/:bookId/unlike/:userId", UnLikeBook)
+
+	//Match
+	app.Post("/match", MatchBook)
 }
