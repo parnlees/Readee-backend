@@ -26,10 +26,10 @@ func CreateBook(c *fiber.Ctx) error {
 // Get Book
 func GetBook(c *fiber.Ctx) error {
 	var book table.Book
-	bookId := c.Params("id")
+	BookId := c.Params("BookId")
 
 	// Find the book by ID
-	if err := database.DB.First(&book, bookId).Error; err != nil {
+	if err := database.DB.First(&book, BookId).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Book not found"})
 	}
 
