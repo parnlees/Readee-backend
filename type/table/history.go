@@ -9,5 +9,5 @@ type History struct {
 	OwnerMatchId *uint64    `gorm:"index"`
 	BookMatchId  *uint64    `gorm:"not null;unique"`
 	Book         *Book      `gorm:"foreignKey:BookMatchId;references:BookId"`
-	MatchTime    *time.Time `gorm:"precision:6"`
+	MatchTime    *time.Time `gorm:"autoCreateTime"`
 }

@@ -1,7 +1,6 @@
 package endpoint
 
 import (
-	//"Readee-backend/endpoint"
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
 	"log"

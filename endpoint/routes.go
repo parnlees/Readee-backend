@@ -16,6 +16,6 @@ func RegisterRoutes(app *fiber.App) {
 	app.Patch("/editBook/:BookId", EditBook)
 	app.Delete("/deleteBook/:BookId", DeleteBook)
 
-	// Register matching-related routes
-	// Add your matching routes here
+	// Log
+	app.Post("/likeBook/:BookId", LikeBook)
 }

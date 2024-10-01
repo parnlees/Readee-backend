@@ -11,6 +11,6 @@ type Rating struct {
 	Rating     *float64   `gorm:"not null"`
 	Score      *uint64    `gorm:"not null"`
 	NumRate    *uint64    `gorm:"not null"`
-	CreatedAt  *time.Time `gorm:"precision:6"`
-	UpdatedAt  *time.Time `gorm:"precision:6"`
+	CreatedAt  *time.Time `gorm:"autoCreateTime"`
+	UpdatedAt  *time.Time `gorm:"autoCreateTime"`
 }

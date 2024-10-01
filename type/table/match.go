@@ -12,6 +12,6 @@ type Match struct {
 	OwnerBook     *Book      `gorm:"foreignKey:OwnerBookId;references:BookId"`
 	MatchedBookId *uint64    `gorm:"not null; uniqueIndex"` // หนังสือของผู้ใช้ที่ถูกแมทช์
 	MatchedBook   *Book      `gorm:"foreignKey:MatchedBookId;references:BookId"`
-	MatchTime     *time.Time `gorm:"precision:6"` // เวลาที่เกิดการแมทช์
-	TradeTime     *time.Time `gorm:"precision:6"` // เวลาที่เกิดการแลกเปลี่ยน
+	MatchTime     *time.Time `gorm:"autoCreateTime"` // เวลาที่เกิดการแมทช์
+	TradeTime     *time.Time `gorm:"autoCreateTime"` // เวลาที่เกิดการแลกเปลี่ยน
 }
