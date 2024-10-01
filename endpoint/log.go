@@ -3,33 +3,63 @@ package endpoint
 import (
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
-	"log"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
 
+func BoolPointer(b bool) *bool {
+	return &b
+}
+
 // Swipe to right = like it -> set value 'liked' to 'true' (liked) in Log table
 func LikeBook(c *fiber.Ctx) error {
-	var bookTable table.Book
-	var logTable table.Log
-	BookId := c.Params("BookId")
+	var logEntry table.Log
 
-	// Find the book by ID
-	if err := database.DB.First(&bookTable, BookId).Error; err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "Book not found"})
+	userId, err := strconv.ParseUint(c.Params("userId"), 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
 	}
 
-	// Create data in log Table by liked == true
-	
-	// Set the value of 'liked' to 1
-	liked := true
-	logTable.Liked = &liked
-
-	// Save the updated log to the database
-	if err := database.DB.Save(&logTable).Error; err != nil {
-		log.Printf("Error updating log: %v", err) // Log the error
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to update log"})
+	bookId, err := strconv.ParseUint(c.Params("bookId"), 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid book ID"})
 	}
 
-	return c.JSON(logTable)
+	logEntry.UserLikeId = &userId
+	logEntry.BookLikeId = &bookId
+	//set true = 1 in database
+	logEntry.Liked = BoolPointer(true)
+
+	if err := database.DB.Create(&logEntry).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to log interaction"})
+	}
+
+	return c.Status(201).JSON(logEntry)
+}
+
+// Swipe to left = unlike it -> set value 'unliked' to 'false' in Log table
+func UnLikeBook(c *fiber.Ctx) error {
+	var logEntry table.Log
+
+	userId, err := strconv.ParseUint(c.Params("userId"), 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
+	}
+
+	bookId, err := strconv.ParseUint(c.Params("bookId"), 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid book ID"})
+	}
+
+	logEntry.UserLikeId = &userId
+	logEntry.BookLikeId = &bookId
+	//set false = 0 in database
+	logEntry.Liked = BoolPointer(false)
+
+	if err := database.DB.Create(&logEntry).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to log interaction"})
+	}
+
+	return c.Status(201).JSON(logEntry)
 }
