@@ -34,7 +34,10 @@ func MatchBook(c *fiber.Ctx) error {
 	// Set match time and trade time (trade time initially null)
 	match.MatchTime = new(time.Time)
 	*match.MatchTime = time.Now() // Record match time
-	match.TradeTime = nil         // Trade time is null for now
+	// Trade time is null for now
+	match.TradeTime = nil
+	// Set trade request status to "none"
+	match.TradeRequestStatus = "none"
 
 	// Insert the match into the database
 	if err := database.DB.Create(&match).Error; err != nil {

@@ -22,4 +22,9 @@ func RegisterRoutes(app *fiber.App) {
 
 	//Match
 	app.Post("/match", MatchBook)
+
+	//Trade
+	app.Post("/trades/:matchId/send-request/:initiatorId", SendTradeRequest)
+	app.Post("/trades/:matchId/accept", AcceptTradeRequest)
+	app.Post("/trades/:matchId/reject", RejectTradeRequest)
 }

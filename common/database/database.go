@@ -48,6 +48,10 @@ func Init() {
 	// db.Migrator().DropTable(&table.Log{}) // delete table
 	// db.Migrator().DropTable("user_genres") // delete joined table
 
+	// Drop index autoIncrement
+	//db.Migrator().DropIndex(&table.Match{}, "idx_matches_owner_book_id")
+	//db.Migrator().DropIndex(&table.Match{}, "idx_matches_matched_book_id")
+
 	cc.DB = db
 	cc.DB.AutoMigrate(&table.User{})
 	cc.DB.AutoMigrate(&table.Genre{})
@@ -59,4 +63,5 @@ func Init() {
 	cc.DB.AutoMigrate(&table.History{})
 	cc.DB.AutoMigrate(&table.Rating{})
 	cc.DB.AutoMigrate(&table.Review{})
+	cc.DB.AutoMigrate(&table.BookPicture{})
 }
