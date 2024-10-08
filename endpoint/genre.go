@@ -1,8 +1,10 @@
-package service
+package endpoint
 
 import (
 	cc "Readee-Backend/common"
+	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
+	"log"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -47,4 +49,17 @@ func GetGenreByID(c *fiber.Ctx) error {
 
 	// Return the genre as JSON
 	return c.JSON(genre)
+}
+
+func CreateGenres(c *fiber.Ctx) error {
+	var genres table.Genre
+
+	if err := c.BodyParser(&genres); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+	if err := database.DB.Create(&genres).Error; err != nil {
+		log.Println("Error to create genres: %v", err) // Log the error
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create genres"})
+	}
+	return c.Status(201).JSON(genres)
 }

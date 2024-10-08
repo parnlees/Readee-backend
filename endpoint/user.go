@@ -3,6 +3,7 @@ package endpoint
 import (
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
+	"log"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -34,4 +35,17 @@ func GetUserSpecific(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(user)
+}
+
+func CreateUser(c *fiber.Ctx) error {
+	var users table.User
+
+	if err := c.BodyParser(&users); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+	if err := database.DB.Create(&users).Error; err != nil {
+		log.Println("Error creating users: %v", err) // Log the error
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create users"})
+	}
+	return c.Status(201).JSON(users)
 }

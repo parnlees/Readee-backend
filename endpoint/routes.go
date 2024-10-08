@@ -8,6 +8,11 @@ func RegisterRoutes(app *fiber.App) {
 	// User
 	app.Get("/users", GetUsers)
 	app.Get("/users/:userId", GetUserSpecific)
+	app.Post("/createUser", CreateUser)
+
+	app.Get("/genres", GetGenres)
+	app.Get("/genres/:genre_id", GetGenreByID)
+	app.Post("/createGenres", CreateGenres)
 
 	// Book
 	app.Post("/createBook", CreateBook)
@@ -19,6 +24,9 @@ func RegisterRoutes(app *fiber.App) {
 	// Log
 	app.Post("/books/:bookId/like/:userId", LikeBook)
 	app.Post("/books/:bookId/unlike/:userId", UnLikeBook)
+
+	app.Get("/userGenres", GetUserGenres)
+	app.Post("/createUserGenres", CreateUserGenres)
 
 	//Match
 	app.Post("/match", MatchBook)
