@@ -63,5 +63,4 @@ func Init() {
 	cc.DB.AutoMigrate(&table.History{})
 	cc.DB.AutoMigrate(&table.Rating{})
 	cc.DB.AutoMigrate(&table.Review{})
-	cc.DB.AutoMigrate(&table.BookPicture{})
 }
