@@ -10,6 +10,7 @@ type Book struct {
 	OwnerId         *uint64    `gorm:"not null"`
 	Owner           *User      `gorm:"foreignKey:OwnerId;references:UserId"`
 	BookName        *string    `gorm:"type:VARCHAR(256);not null"`
+	Author          *string    `gorm:"type:VARCHAR(256);not null"`
 	BookPicture     *string    `gorm:"type:VARCHAR(256);not null"`
 	BookDescription *string    `gorm:"type:VARCHAR(256);not null"`
 	GenreId         *uint64    `gorm:"not null"`

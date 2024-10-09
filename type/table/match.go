@@ -13,9 +13,9 @@ type Match struct {
 	MatchedBookId *uint64    `gorm:"not null"` // หนังสือของผู้ใช้ที่ถูกแมทช์
 	MatchedBook   *Book      `gorm:"foreignKey:MatchedBookId;references:BookId"`
 	MatchTime     *time.Time `gorm:"autoCreateTime"` // เวลาที่เกิดการแมทช์
-	TradeTime     *time.Time `gorm:"autoCreateTime"` // เวลาที่เกิดการแลกเปลี่ยน
+	TradeTime     *time.Time `gorm:"null"`           // เวลาที่เกิดการแลกเปลี่ยน
 
 	TradeRequestStatus string  `gorm:"type:varchar(10);default:'none'"` // none, pending, accepted, rejected
-	RequestInitiatorId *uint64 `gorm:"null"`                        // id ของคนเริ่มส่ง request                          
+	RequestInitiatorId *uint64 `gorm:"null"`                            // id ของคนเริ่มส่ง request
 
 }

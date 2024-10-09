@@ -3,8 +3,10 @@ package endpoint
 import (
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
-	"strconv"
+	"log"
 	"time"
+
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -13,83 +15,81 @@ func BoolPointer(b bool) *bool {
 	return &b
 }
 
-// Swipe to right = like it -> set value 'liked' to 'true' (liked) in Log table
-func LikeBook(c *fiber.Ctx) error {
-	var logEntry table.Log
+func Uint64Pointer(u uint64) *uint64 {
+	return &u
+}
 
-	// ดึง userId และ bookId จากพารามิเตอร์
-	userId, err := strconv.ParseUint(c.Params("userId"), 10, 64)
+func LikeBook(c *fiber.Ctx) error {
+	userId, err := strconv.Atoi(c.Params("userId"))
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
 	}
-
-	bookId, err := strconv.ParseUint(c.Params("bookId"), 10, 64)
+	bookId, err := strconv.Atoi(c.Params("bookId"))
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid book ID"})
 	}
 
-	// บันทึกการกดถูกใจ (like) ของผู้ใช้ปัจจุบันใน Log table
-	logEntry.UserLikeId = &userId
-	logEntry.BookLikeId = &bookId
-	logEntry.Liked = BoolPointer(true)
-
-	if err := database.DB.Create(&logEntry).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to log interaction"})
+	tx := database.DB.Begin()
+	if tx.Error != nil {
+		log.Println("tx.Error is " + tx.Error.Error())
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to begin transaction"})
 	}
-
-	// ค้นหาเจ้าของหนังสือเล่มนี้
-	var ownerBook table.Book
-	if err := database.DB.Where("book_id = ?", bookId).First(&ownerBook).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to find book owner"})
-	}
-
-	// Find all books of the owner (A) that B liked
-	var booksLikedByB []table.Log
-	if err := database.DB.Where("user_like_id = ? AND liked = ?", ownerBook.OwnerId, true).Find(&booksLikedByB).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to find books liked by user B"})
-	}
-
-	// Check if A liked any books of B (e.g. bookId == 9)
-	var likedBooksByA []table.Log
-	if err := database.DB.Where("user_like_id = ? AND liked = ?", userId, true).Find(&likedBooksByA).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to find books liked by user A"})
-	}
-
-	// Create matches for all books liked by B and matched with the books liked by A
-	matches := []table.Match{}
-	for _, bookLikedByB := range booksLikedByB {
-		for _, bookLikedByA := range likedBooksByA {
-			// Create a match for each combination of books liked by B and A
-			for i := 0; i < len(booksLikedByB); i++ {
-				for j := 0; j < len(likedBooksByA); j++ {
-					match := table.Match{
-						OwnerId:            ownerBook.OwnerId,       // Owner of the book
-						MatchedUserId:      &userId,                 // Current user who liked the book
-						OwnerBookId:        bookLikedByB.BookLikeId, // Book that B liked
-						MatchedBookId:      bookLikedByA.BookLikeId, // Book that A liked
-						MatchTime:          TimePointer(time.Now()),
-						TradeTime:          nil,
-						TradeRequestStatus: "none",
-					}
-
-					// Save the match to the database
-					if err := database.DB.Create(&match).Error; err != nil {
-						return c.Status(500).JSON(fiber.Map{"error": "Failed to create match"})
-					}
-					matches = append(matches, match)
-				}
-			}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
 		}
+	}()
+
+	var existingLog table.Log
+	if err := tx.Where("user_like_id = ? AND book_like_id = ?", userId, bookId).First(&existingLog).Error; err == nil {
+		tx.Rollback()
+		return c.Status(200).JSON(fiber.Map{"error": "This log already exists"})
 	}
 
-	if len(matches) > 0 {
-		return c.Status(201).JSON(fiber.Map{"message": "Matches created successfully", "matches": matches})
+	//var Book table.Book
+	newLog := table.Log{
+		UserLikeId: Uint64Pointer(uint64(userId)),
+		BookLikeId: Uint64Pointer(uint64(bookId)),
+		Liked:      BoolPointer(true),
+		CreatedAt:  TimePointer(time.Now()),
 	}
 
-	return c.Status(200).JSON(fiber.Map{"message": "Like logged successfully", "log": logEntry})
+	if err := tx.Create(&newLog).Error; err != nil {
+		tx.Rollback()
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create log"})
+	}
+	log.Println("newLog is ", newLog)
+
+	var mutualLog table.Log
+	// mutualLog.UserLikeId, Book.BookId
+	if err := tx.Where("user_like_id = ? AND book_like_id = ? AND liked = ?", mutualLog.UserLikeId, newLog.BookLikeId, true).First(&mutualLog).Error; err == nil {
+		log.Println("mutualLog is ", mutualLog)
+
+		var existingMatch table.Match
+		if err := tx.Where("owner_id = ? AND matched_user_id = ?", userId, mutualLog.UserLikeId).First(&existingMatch).Error; err == nil {
+			tx.Rollback()
+			return c.Status(200).JSON(fiber.Map{"error": "This match already exists"})
+		}
+
+		newMatch := table.Match{
+			OwnerId:       Uint64Pointer(uint64(userId)),
+			MatchedUserId: mutualLog.UserLikeId,
+			OwnerBookId:   Uint64Pointer(uint64(bookId)),
+			MatchedBookId: mutualLog.BookLikeId,
+		}
+		if err := tx.Create(&newMatch).Error; err != nil {
+			tx.Rollback() // Rollback หากสร้างแมทช์ไม่สำเร็จ
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to create match"})
+		}
+		//return c.Status(201).JSON(fiber.Map{"message": "Match created successfully"})
+		log.Printf("Match created: %+v\n", newMatch)
+	}
+	if err := tx.Commit().Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to commit transaction"})
+	}
+	return c.Status(201).JSON(fiber.Map{"message": "Log created successfully"})
 }
 
-// Swipe to left = unlike it -> set value 'unliked' to 'false' in Log table
 func UnLikeBook(c *fiber.Ctx) error {
 	var logEntry table.Log
 

@@ -13,6 +13,12 @@ import (
 var DB *gorm.DB
 
 func Init() {
+	// connection name: parn
+	// server address: server2.bsthun.com
+	// port: 4004
+	// database name: poc2
+	// username: parn
+	// password: parn1234
 	dsn2 := "parn:parn1234@tcp(server2.bsthun.com:4004)/poc2?charset=utf8mb4&parseTime=true&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn2), &gorm.Config{})
 	if err != nil {
@@ -21,17 +27,6 @@ func Init() {
 		log.Println("connect to database success")
 
 		DB = db
-
-		// User := db.
-		// var users []myTypes.User
-
-		// // Get all records
-		// var result = db.Find(&users)
-		// //print result rows count
-		// log.Println(result.RowsAffected)
-		// for _, user := range users {
-		//  log.Printf("UserID: %d, FirstName: %s, LastName: %s, Email: %s\n", user.UserId, *user.Firstname, *user.Lastname, user.Email)
-		// }
 	}
 
 	// Drop all tables
@@ -47,10 +42,6 @@ func Init() {
 	// Drop specific table
 	// db.Migrator().DropTable(&table.Log{}) // delete table
 	// db.Migrator().DropTable("user_genres") // delete joined table
-
-	// Drop index autoIncrement
-	//db.Migrator().DropIndex(&table.Match{}, "idx_matches_owner_book_id")
-	//db.Migrator().DropIndex(&table.Match{}, "idx_matches_matched_book_id")
 
 	cc.DB = db
 	cc.DB.AutoMigrate(&table.User{})
