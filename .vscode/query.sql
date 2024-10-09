@@ -21,3 +21,4 @@
 -- ADD CONSTRAINT fk_matches_matched_book FOREIGN KEY (matched_book_id) REFERENCES books(book_id);
 
 -- SELECT * FROM matches;
+SHOW CREATE TABLE logs;

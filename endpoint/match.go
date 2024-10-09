@@ -24,8 +24,8 @@ func MatchBook(c *fiber.Ctx) error {
 
 	// Check if both users liked each other's books
 	var logOwner, logMatched table.Log
-	errOwner := database.DB.Where("user_like_id = ? AND book_like_id = ? AND liked = ?", match.OwnerId, match.MatchedBookId, true).First(&logOwner).Error
-	errMatched := database.DB.Where("user_like_id = ? AND book_like_id = ? AND liked = ?", match.MatchedUserId, match.OwnerBookId, true).First(&logMatched).Error
+	errOwner := database.DB.Where("LikerId = ? AND book_like_id = ? AND liked = ?", match.OwnerId, match.MatchedBookId, true).First(&logOwner).Error
+	errMatched := database.DB.Where("LikerId = ? AND book_like_id = ? AND liked = ?", match.MatchedUserId, match.OwnerBookId, true).First(&logMatched).Error
 
 	if errOwner != nil || errMatched != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Match conditions not met"})

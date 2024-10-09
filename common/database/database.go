@@ -42,6 +42,7 @@ func Init() {
 	// Drop specific table
 	// db.Migrator().DropTable(&table.Log{}) // delete table
 	// db.Migrator().DropTable("user_genres") // delete joined table
+	// db.Exec("ALTER TABLE logs DROP COLUMN user_like_id")
 
 	cc.DB = db
 	cc.DB.AutoMigrate(&table.User{})
