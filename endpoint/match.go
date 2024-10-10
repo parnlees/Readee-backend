@@ -3,47 +3,71 @@ package endpoint
 import (
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
-	"time"
-
-	//"log"
-	//"strconv"
+	"log"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-// Match two books when 2 user give liked==1 to each other
-// Then add value to Match table
-// POST method
-func MatchBook(c *fiber.Ctx) error {
-	var match table.Match
+// GetMatchBook retrieves all matched books for a given user by their userId.
+// It ensures that ownerBookId corresponds to the userId in the request path.
 
-	// Parse the request body into the match struct
-	if err := c.BodyParser(&match); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Unable to parse request body"})
+func GetMatchBook(c *fiber.Ctx) error {
+	// Convert the userId from the request parameters
+	userId := c.Params("userId")
+	if userId == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
 	}
 
-	// Check if both users liked each other's books
-	var logOwner, logMatched table.Log
-	errOwner := database.DB.Where("LikerId = ? AND book_like_id = ? AND liked = ?", match.OwnerId, match.MatchedBookId, true).First(&logOwner).Error
-	errMatched := database.DB.Where("LikerId = ? AND book_like_id = ? AND liked = ?", match.MatchedUserId, match.OwnerBookId, true).First(&logMatched).Error
+	// Begin the transaction
+	tx := database.DB.Begin()
+	if tx.Error != nil {
+		log.Println("tx.Error is " + tx.Error.Error())
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to begin transaction"})
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
 
-	if errOwner != nil || errMatched != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Match conditions not met"})
+	// Query to get all matches where the user is either the owner or matched user
+	var matches []table.Match
+	if err := tx.Where("owner_id = ? OR matched_user_id = ?", userId, userId).Find(&matches).Error; err != nil {
+		tx.Rollback()
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve matches"})
 	}
 
-	// Set match time and trade time (trade time initially null)
-	match.MatchTime = new(time.Time)
-	*match.MatchTime = time.Now() // Record match time
-	// Trade time is null for now
-	match.TradeTime = nil
-	// Set trade request status to "none"
-	match.TradeRequestStatus = "none"
-
-	// Insert the match into the database
-	if err := database.DB.Create(&match).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create match"})
+	// Check if there are no matches
+	if len(matches) == 0 {
+		return c.Status(200).JSON(fiber.Map{"message": "No matches found for this user"})
 	}
 
-	// Return the created match as a response
-	return c.Status(201).JSON(match)
+	// Commit the transaction
+	tx.Commit()
+
+	// Build the response to return only the relevant fields
+	response := []fiber.Map{}
+	for _, match := range matches {
+		// Determine if the user is the owner or the matched user
+		var ownerBookId, matchedBookId *uint64
+
+		if match.OwnerId == Uint64Pointer(userId) {
+			// User is the owner
+			ownerBookId = match.OwnerBookId
+			matchedBookId = match.MatchedBookId
+		} else if match.MatchedUserId == Uint64Pointer(uint64(userId)) {
+			// User is the matched user, reverse the roles
+			ownerBookId = match.MatchedBookId
+			matchedBookId = match.OwnerBookId
+		}
+
+		// Add the result to the response
+		response = append(response, fiber.Map{
+			"ownerBookId":   ownerBookId,
+			"matchedBookId": matchedBookId,
+		})
+	}
+
+	// Return the match details in the response
+	return c.Status(200).JSON(fiber.Map{"matches": response})
 }
