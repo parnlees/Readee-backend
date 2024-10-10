@@ -4,6 +4,7 @@ import (
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
 	"log"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -13,8 +14,8 @@ import (
 
 func GetMatchBook(c *fiber.Ctx) error {
 	// Convert the userId from the request parameters
-	userId := c.Params("userId")
-	if userId == "" {
+	userId, err := strconv.Atoi(c.Params("userId"))
+	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
 	}
 
@@ -51,11 +52,11 @@ func GetMatchBook(c *fiber.Ctx) error {
 		// Determine if the user is the owner or the matched user
 		var ownerBookId, matchedBookId *uint64
 
-		if match.OwnerId == Uint64Pointer(userId) {
+		if *match.OwnerId == uint64(userId) {
 			// User is the owner
 			ownerBookId = match.OwnerBookId
 			matchedBookId = match.MatchedBookId
-		} else if match.MatchedUserId == Uint64Pointer(uint64(userId)) {
+		} else if *match.MatchedUserId == uint64(userId) {
 			// User is the matched user, reverse the roles
 			ownerBookId = match.MatchedBookId
 			matchedBookId = match.OwnerBookId
