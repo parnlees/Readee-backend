@@ -20,14 +20,18 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getBooks", GetBooks)
 	app.Patch("/editBook/:BookId", EditBook)
 	app.Delete("/deleteBook/:BookId", DeleteBook)
+	app.Get("/getBookByUser/:OwnerId", GetBookByOwnerId)
 
 	// Log
 	app.Post("/books/:bookId/like/:userId", LikeBook)
 	app.Post("/books/:bookId/unlike/:userId", UnLikeBook)
+	app.Get("/getLogs/:liker_id", GetLogsByUserID)
 
 	// Genres
 	app.Get("/userGenres", GetUserGenres)
+	app.Get("/userGenres/:user_user_id", GetUserGenreByUserID)
 	app.Post("/createUserGenres", CreateUserGenres)
+	app.Put("/userGenre/edit", EditGenre)
 
 	//Match
 	app.Get("/getMatches/:userId", GetMatchBook)

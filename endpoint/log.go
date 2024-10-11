@@ -142,3 +142,23 @@ func UnLikeBook(c *fiber.Ctx) error {
 
 	return c.Status(201).JSON(logEntry)
 }
+
+func GetLogsByUserID(c *fiber.Ctx) error {
+	userID, err := strconv.ParseUint(c.Params("liker_id"), 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
+	}
+
+	var logs []table.Log
+	result := database.DB.Where("liker_id = ?", userID).Find(&logs)
+
+	if result.Error != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch logs"})
+	}
+
+	if len(logs) == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "No logs found for this user"})
+	}
+
+	return c.JSON(logs)
+}

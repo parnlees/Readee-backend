@@ -89,3 +89,20 @@ func DeleteBook(c *fiber.Ctx) error {
 	// Return success response
 	return c.Status(200).JSON(fiber.Map{"message": "Book deleted successfully"})
 }
+
+func GetBookByOwnerId(c *fiber.Ctx) error {
+	var books []table.Book
+	OwnerId := c.Params("OwnerId")
+
+	// Query the database to find books by the specified OwnerId
+	if err := database.DB.Where("owner_id = ?", OwnerId).Find(&books).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve books for the specified owner"})
+	}
+
+	// If no books are found, return a message indicating this
+	if len(books) == 0 {
+		return c.Status(404).JSON(fiber.Map{"message": "No books found for this owner"})
+	}
+
+	return c.JSON(books)
+}
