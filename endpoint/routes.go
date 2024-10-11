@@ -35,6 +35,7 @@ func RegisterRoutes(app *fiber.App) {
 
 	//Match
 	app.Get("/getMatches/:userId", GetMatchBook)
+	app.Get("/getAllMatches/:matchId", GetMatchById)
 
 	//Trade
 	app.Post("/trades/:matchId/send-request/:initiatorId", SendTradeRequest)

@@ -72,3 +72,14 @@ func GetMatchBook(c *fiber.Ctx) error {
 	// Return the match details in the response
 	return c.Status(200).JSON(fiber.Map{"matches": response})
 }
+
+func GetMatchById(c *fiber.Ctx) error {
+	var match table.Match
+	MatchId := c.Params("MatchId")
+
+	if err := database.DB.First(&match, MatchId).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Match not found"})
+	}
+
+	return c.JSON(match)
+}
