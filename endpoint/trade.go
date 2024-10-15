@@ -75,7 +75,17 @@ func AcceptTradeRequest(c *fiber.Ctx) error {
 	history.BookMatchId = match.OwnerBookId
 	history.MatchTime = TimePointer(time.Now())
 
+	var history2 table.History
+	history2.OwnerId = match.MatchedUserId
+	history2.OwnerMatchId = match.OwnerId
+	history2.BookMatchId = match.MatchedBookId
+	history2.MatchTime = TimePointer(time.Now())
+
 	if err := database.DB.Create(&history).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create history"})
+	}
+
+	if err := database.DB.Create(&history2).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create history"})
 	}
 
@@ -108,4 +118,26 @@ func RejectTradeRequest(c *fiber.Ctx) error {
 	}
 
 	return c.Status(200).JSON(fiber.Map{"message": "Trade request rejected", "match": match})
+}
+
+func CancelTradeRequest(c *fiber.Ctx) error {
+	var match table.Match
+	matchId := c.Params("matchId")
+
+	// Fetch the match record
+	if err := database.DB.First(&match, matchId).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Match not found"})
+	}
+
+	// Reset the trade details
+	match.TradeTime = nil
+	match.TradeRequestStatus = "none"
+	match.RequestInitiatorId = nil
+
+	// Save the updated match record
+	if err := database.DB.Save(&match).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to cancel trade request"})
+	}
+
+	return c.Status(200).JSON(fiber.Map{"message": "Trade request canceled", "match": match})
 }

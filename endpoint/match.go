@@ -50,22 +50,25 @@ func GetMatchBook(c *fiber.Ctx) error {
 	response := []fiber.Map{}
 	for _, match := range matches {
 		// Determine if the user is the owner or the matched user
-		var ownerBookId, matchedBookId *uint64
+		var ownerBookId, matchedBookId, matchId *uint64
 
 		if *match.OwnerId == uint64(userId) {
 			// User is the owner
 			ownerBookId = match.OwnerBookId
 			matchedBookId = match.MatchedBookId
+			matchId = match.MatchId
 		} else if *match.MatchedUserId == uint64(userId) {
 			// User is the matched user, reverse the roles
 			ownerBookId = match.MatchedBookId
 			matchedBookId = match.OwnerBookId
+			matchId = match.MatchId
 		}
 
 		// Add the result to the response
 		response = append(response, fiber.Map{
 			"ownerBookId":   ownerBookId,
 			"matchedBookId": matchedBookId,
+			"matchId":       matchId,
 		})
 	}
 
