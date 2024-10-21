@@ -42,4 +42,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/trades/:matchId/cancel-request", CancelTradeRequest)
 	app.Post("/trades/:matchId/accept", AcceptTradeRequest)
 	app.Post("/trades/:matchId/reject", RejectTradeRequest)
+
+	//Review
+	app.Post("/review_rating", SubmitRatingAndReview)
 }
