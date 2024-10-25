@@ -91,3 +91,38 @@ func GetMatchById(c *fiber.Ctx) error {
 
 	return c.JSON(match)
 }
+
+// DeleteMatch deletes a match record from the database.
+func DeleteMatch(c *fiber.Ctx) error {
+	matchId, err := strconv.ParseUint(c.Params("matchId"), 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid match ID"})
+	}
+
+	tx := database.DB.Begin()
+	if tx.Error != nil {
+		log.Println("tx.Error is " + tx.Error.Error())
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to begin transaction"})
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var match table.Match
+	if err := tx.First(&match, matchId).Error; err != nil {
+		tx.Rollback()
+		return c.Status(404).JSON(fiber.Map{"error": "Match not found"})
+	}
+
+	if err := tx.Delete(&match).Error; err != nil {
+		tx.Rollback()
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete match"})
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to commit transaction"})
+	}
+	return c.Status(200).JSON(fiber.Map{"message": "Match deleted successfully"})
+}
