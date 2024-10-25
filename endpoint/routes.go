@@ -26,6 +26,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/books/:bookId/like/:userId", LikeBook)
 	app.Post("/books/:bookId/unlike/:userId", UnLikeBook)
 	app.Get("/getLogs/:liker_id", GetLogsByUserID)
+	app.Post("/unlikeLogs/:bookLikeId/:likerId", UnlikeLogs)
 
 	// Genres
 	app.Get("/userGenres", GetUserGenres)

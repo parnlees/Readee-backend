@@ -5,6 +5,7 @@ import (
 	"Readee-Backend/type/table"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -51,17 +52,20 @@ func GetMatchBook(c *fiber.Ctx) error {
 	for _, match := range matches {
 		// Determine if the user is the owner or the matched user
 		var ownerBookId, matchedBookId, matchId *uint64
+		var matchTime *time.Time
 
 		if *match.OwnerId == uint64(userId) {
 			// User is the owner
 			ownerBookId = match.OwnerBookId
 			matchedBookId = match.MatchedBookId
 			matchId = match.MatchId
+			matchTime = match.MatchTime
 		} else if *match.MatchedUserId == uint64(userId) {
 			// User is the matched user, reverse the roles
 			ownerBookId = match.MatchedBookId
 			matchedBookId = match.OwnerBookId
 			matchId = match.MatchId
+			matchTime = match.MatchTime
 		}
 
 		// Add the result to the response
@@ -69,6 +73,7 @@ func GetMatchBook(c *fiber.Ctx) error {
 			"ownerBookId":   ownerBookId,
 			"matchedBookId": matchedBookId,
 			"matchId":       matchId,
+			"matchTime":     matchTime,
 		})
 	}
 

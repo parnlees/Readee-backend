@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
 func BoolPointer(b bool) *bool {
@@ -161,4 +162,38 @@ func GetLogsByUserID(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(logs)
+}
+
+func UnlikeLogs(c *fiber.Ctx) error {
+	// Parse bookLikeId and likerId from the URL parameters
+	bookLikeId, err := strconv.ParseUint(c.Params("bookLikeId"), 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid bookLikeId"})
+	}
+
+	likerId, err := strconv.ParseUint(c.Params("likerId"), 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid likerId"})
+	}
+
+	// Retrieve the log entry from the database
+	var logEntry table.Log
+	result := database.DB.Where("book_like_id = ? AND liker_id = ?", bookLikeId, likerId).First(&logEntry)
+
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return c.Status(404).JSON(fiber.Map{"error": "Log entry not found"})
+		}
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve log entry"})
+	}
+
+	// Set Liked to false
+	logEntry.Liked = BoolPointer(false)
+
+	// Save the updated log entry in the database
+	if err := database.DB.Save(&logEntry).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update log entry"})
+	}
+
+	return c.Status(200).JSON(fiber.Map{"message": "Log updated successfully", "logEntry": logEntry})
 }
