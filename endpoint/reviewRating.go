@@ -89,3 +89,83 @@ func SubmitRatingAndReview(c *fiber.Ctx) error {
 		"average_rating": rating.Rating,
 	})
 }
+
+// Get average rating of a user
+func GetAverageRating(c *fiber.Ctx) error {
+	userId := c.Params("userId")
+
+	var rating table.Rating
+	// Get latest rating of that user
+	if err := database.DB.Where("receiver_id = ?", userId).Last(&rating).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Rating not found"})
+	}
+	return c.Status(200).JSON(fiber.Map{
+		"average_rating": rating.Rating,
+	})
+}
+
+// Get rating and review that user got
+func GetReceivedReviewsAndRatings(c *fiber.Ctx) error {
+	userId := c.Params("userId")
+
+	var review []table.Review
+	if err := database.DB.Preload("Giver").Where("receiver_id = ?", userId).Find(&review).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve reviews"})
+	}
+	if len(review) == 0 {
+		return c.Status(200).JSON(fiber.Map{"message": "No reviews found for this user"})
+	}
+
+	response := []fiber.Map{}
+	for _, r := range review {
+		var rating table.Rating
+		if err := database.DB.Where("giver_id = ? AND receiver_id = ?", r.GiverId, r.ReceiverId).First(&rating).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve rating"})
+		}
+		response = append(response, fiber.Map{
+			"review":        r.TextReview,
+			"rating":        rating.Score,
+			"giver_name":    r.Giver.Username,
+			"giver_picture": r.Giver.ProfileUrl,
+			"created_at":    r.CreatedAt,
+		})
+	}
+	return c.Status(200).JSON(fiber.Map{"reviews": response})
+}
+
+// Get rating and review that user gave
+func GetGivenReviewsAndRatingsWithTradedBooks(c *fiber.Ctx) error {
+	userId := c.Params("userId")
+
+	var review []table.Review
+	if err := database.DB.Preload("Receiver").Where("giver_id = ?", userId).Find(&review).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve reviews"})
+	}
+	if len(review) == 0 {
+		return c.Status(200).JSON(fiber.Map{"message": "No reviews found for this user"})
+	}
+
+	response := []fiber.Map{}
+	for _, r := range review {
+		var rating table.Rating
+		var match table.Match
+		if err := database.DB.Where("giver_id = ? AND receiver_id = ?", r.GiverId, r.ReceiverId).First(&rating).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve rating"})
+		}
+		if err := database.DB.Preload("MatchedBook").Where("matched_user_id = ? AND owner_id = ?", r.ReceiverId, r.GiverId).First(&match).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve match information"})
+		}
+		matchedBookPicture := match.MatchedBook.BookPicture
+
+		response = append(response, fiber.Map{
+			"receiver_name":         r.Receiver.Username,
+			"receiver_picture":      r.Receiver.ProfileUrl,
+			"receiver_book_picture": matchedBookPicture,
+			"receiver_book_name":    match.MatchedBook.BookName,
+			"rating":                rating.Score,
+			"review":                r.TextReview,
+			"created_at":            r.CreatedAt,
+		})
+	}
+	return c.Status(200).JSON(fiber.Map{"reviews": response})
+}
