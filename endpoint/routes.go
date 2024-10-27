@@ -45,6 +45,12 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/trades/:matchId/accept", AcceptTradeRequest)
 	app.Post("/trades/:matchId/reject", RejectTradeRequest)
 
-	//Review
+	//Review & Rating
 	app.Post("/review_rating", SubmitRatingAndReview)
+	app.Get("/avgRating/:userId", GetAverageRating)
+	app.Get("/reviews/received/:userId", GetReceivedReviewsAndRatings)
+	app.Get("/reviews/given/:userId", GetGivenReviewsAndRatingsWithTradedBooks)
+
+	//History
+	app.Get("/history/:userId", GetHistory)
 }
