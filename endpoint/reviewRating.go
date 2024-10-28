@@ -89,3 +89,122 @@ func SubmitRatingAndReview(c *fiber.Ctx) error {
 		"average_rating": rating.Rating,
 	})
 }
+
+// Get average rating of a user
+func GetAverageRating(c *fiber.Ctx) error {
+	userId := c.Params("userId")
+
+	var rating table.Rating
+	// Get latest rating of that user
+	if err := database.DB.Where("receiver_id = ?", userId).Last(&rating).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Rating not found"})
+	}
+	return c.Status(200).JSON(fiber.Map{
+		"average_rating": rating.Rating,
+	})
+}
+
+// Get rating and review that user got
+func GetReceivedReviewsAndRatings(c *fiber.Ctx) error {
+	userId := c.Params("userId")
+
+	var review []table.Review
+	if err := database.DB.Preload("Giver").Where("receiver_id = ?", userId).Find(&review).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve reviews"})
+	}
+	if len(review) == 0 {
+		return c.Status(200).JSON(fiber.Map{"message": "No reviews found for this user"})
+	}
+
+	response := []fiber.Map{}
+	for _, r := range review {
+		var rating table.Rating
+		if err := database.DB.Where("giver_id = ? AND receiver_id = ?", r.GiverId, r.ReceiverId).First(&rating).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve rating"})
+		}
+		response = append(response, fiber.Map{
+			"review":        r.TextReview,
+			"rating":        rating.Score,
+			"giver_name":    r.Giver.Username,
+			"giver_picture": r.Giver.ProfileUrl,
+			"created_at":    r.CreatedAt,
+		})
+	}
+	return c.Status(200).JSON(fiber.Map{"reviews": response})
+}
+
+// Get rating and review that user gave
+func GetGivenReviewsAndRatingsWithTradedBooks(c *fiber.Ctx) error {
+	userId := c.Params("userId")
+	log.Println("userId:", userId)
+
+	var reviews []table.Review
+	// Preload "Receiver" เพื่อให้เข้าถึงข้อมูลของ receiver ได้
+	if err := database.DB.Preload("Receiver").Where("giver_id = ?", userId).Find(&reviews).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve reviews"})
+	}
+
+	// ตรวจสอบว่ามี review หรือไม่
+	log.Println("Retrieved reviews:", reviews)
+	if len(reviews) == 0 {
+		return c.Status(200).JSON(fiber.Map{"message": "No reviews found for this user"})
+	}
+
+	response := []fiber.Map{}
+	for _, r := range reviews {
+		var rating table.Rating
+		var match table.Match
+
+		// Query rating ที่ตรงกับ giver_id และ receiver_id ของ review นั้น ๆ
+		if err := database.DB.Where("giver_id = ? AND receiver_id = ?", *r.GiverId, *r.ReceiverId).First(&rating).Error; err != nil {
+			log.Println("Failed to retrieve rating for giver_id =", *r.GiverId, "receiver_id =", *r.ReceiverId)
+			continue
+		}
+		log.Println("Retrieved rating:", rating)
+
+		// Query match พร้อม preload MatchedBook เพื่อให้สามารถดึงข้อมูลหนังสือของผู้รับมาได้
+		if err := database.DB.Preload("MatchedBook").Where("matched_user_id = ? AND owner_id = ?", *r.ReceiverId, *r.GiverId).First(&match).Error; err != nil {
+			log.Printf("No match found for matched_user_id = %d and owner_id = %d", *r.ReceiverId, *r.GiverId)
+			// หากไม่พบ match ให้ใช้ค่า nil แทน
+			response = append(response, fiber.Map{
+				"receiver_name":         r.Receiver.Username,
+				"receiver_picture":      r.Receiver.ProfileUrl,
+				"receiver_book_picture": nil,
+				"receiver_book_name":    nil,
+				"rating":                rating.Score,
+				"review":                r.TextReview,
+				"created_at":            r.CreatedAt,
+			})
+			continue
+		}
+
+		// ตรวจสอบว่า MatchedBook ไม่เป็น nil ก่อนเข้าถึงข้อมูล
+		if match.MatchedBook == nil {
+			log.Println("MatchedBook is nil for match:", match)
+			response = append(response, fiber.Map{
+				"receiver_name":         r.Receiver.Username,
+				"receiver_picture":      r.Receiver.ProfileUrl,
+				"receiver_book_picture": nil,
+				"receiver_book_name":    nil,
+				"rating":                rating.Score,
+				"review":                r.TextReview,
+				"created_at":            r.CreatedAt,
+			})
+			continue
+		}
+
+		// สร้าง response object สำหรับแต่ละรีวิว
+		response = append(response, fiber.Map{
+			"receiver_name":         r.Receiver.Username,
+			"receiver_picture":      r.Receiver.ProfileUrl,
+			"receiver_book_picture": match.MatchedBook.BookPicture,
+			"receiver_book_name":    match.MatchedBook.BookName,
+			"rating":                rating.Score,
+			"review":                r.TextReview,
+			"created_at":            r.CreatedAt,
+		})
+	}
+
+	log.Println("Final response:", response)
+	return c.Status(200).JSON(fiber.Map{"reviews": response})
+}
