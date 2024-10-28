@@ -117,3 +117,32 @@ func EditUser(c *fiber.Ctx) error {
 
 	return c.JSON(user)
 }
+
+
+func CheckUser(c *fiber.Ctx) error {
+	type Request struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+	}
+
+	var req Request
+	var user table.User
+
+	// Parse the request body to get the username and email
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
+	}
+
+	// Check if the username already exists
+	if err := database.DB.Where("username = ?", req.Username).First(&user).Error; err == nil {
+		return c.Status(409).JSON(fiber.Map{"error": "This username is already taken"})
+	}
+
+	// Check if the email already exists
+	if err := database.DB.Where("email = ?", req.Email).First(&user).Error; err == nil {
+		return c.Status(409).JSON(fiber.Map{"error": "This email is already registered"})
+	}
+
+	// If no conflicts, return success message
+	return c.JSON(fiber.Map{"message": "Username and email are available"})
+}

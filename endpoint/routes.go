@@ -9,6 +9,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/users", GetUsers)
 	app.Get("/users/:userId", GetUserSpecific)
 	app.Post("/createUser", CreateUser)
+	app.Post("/checkUser", CheckUser)
 
 	app.Get("/genres", GetGenres)
 	app.Get("/genres/:genre_id", GetGenreByID)
