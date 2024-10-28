@@ -14,6 +14,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/genres/:genre_id", GetGenreByID)
 	app.Post("/createGenres", CreateGenres)
 
+	app.Patch("/user/edit/:userId", EditUser)
+
 	// Book
 	app.Post("/createBook", CreateBook)
 	app.Get("/getBook/:BookId", GetBookSpecific)
