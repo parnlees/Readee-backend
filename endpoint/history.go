@@ -3,6 +3,7 @@ package endpoint
 import (
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -36,4 +37,31 @@ func GetHistory(c *fiber.Ctx) error {
 	}
 
 	return c.Status(200).JSON(fiber.Map{"histories": response})
+}
+
+func TradeCount(c *fiber.Ctx) error {
+	// Parse userId from the URL
+	userIdParam := c.Params("userId")
+	userId, err := strconv.ParseUint(userIdParam, 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
+	}
+
+	// Count trades for the specified userId
+	var count int64
+	if err := database.DB.Model(&History{}).
+		Where("owner_id = ? OR matched_user_id = ?", userId, userId).
+		Count(&count).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to count trades",
+		})
+	}
+
+	// Return the count as JSON
+	return c.JSON(fiber.Map{
+		"userId": userId,
+		"tradeCount": count,
+	})
 }

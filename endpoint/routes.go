@@ -56,9 +56,11 @@ func RegisterRoutes(app *fiber.App) {
 
 	//History
 	app.Get("/history/:userId", GetHistory)
+	app.Get("/tradeCount/:userId", TradeCount)
 
 	//Rating
 	app.Get("/getRating/:userId", GetRatingByUserId)
+	app.Get("/getAverageRate/:userId", GetAverageRatingByUserId)
 
 	//Room
 	app.Post("/createRoom/:senderId/:receiverId", CreateRoom)
