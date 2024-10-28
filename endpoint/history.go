@@ -7,13 +7,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// Get all history of a user
+// Get all history of a user with book details
 func GetHistory(c *fiber.Ctx) error {
 	userId := c.Params("userId")
 	var histories []table.History
 
-	if err := database.DB.Preload("Book").Preload("Owner").
-		Where("owner_id = ? OR owner_match_id = ?", userId, userId). // ตรวจสอบว่าผู้ใช้เป็นเจ้าของหรือผู้แลกเปลี่ยน
+	// Load history with associated OwnerBook, MatchedBook, and Owner details
+	if err := database.DB.Preload("OwnerBook").Preload("MatchedBook").Preload("Owner").
+		Where("owner_id = ? OR matched_user_id = ?", userId, userId).
 		Find(&histories).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve trade history"})
 	}
@@ -22,26 +23,17 @@ func GetHistory(c *fiber.Ctx) error {
 		return c.Status(200).JSON(fiber.Map{"message": "No history found for this user"})
 	}
 
+	// Build the response with the required fields
 	response := []fiber.Map{}
 	for _, h := range histories {
-		var ownerBook table.Book
-		var tradedBook table.Book
-		if err := database.DB.Where("book_id = ?", h.BookMatchId).First(&ownerBook).Error; err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve user's book"})
-		}
-
-		if err := database.DB.Where("book_id = ?", h.OwnerMatchId).First(&tradedBook).Error; err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve matched user's book"})
-		}
-
 		response = append(response, fiber.Map{
-			"user_book_name":            ownerBook.BookName,
-			"user_book_picture":         ownerBook.BookPicture,
-			"matched_user_book_name":    tradedBook.BookName,
-			"matched_user_book_picture": tradedBook.BookPicture,
-			"match_time":                h.MatchTime,
+			"user_book_name":            h.OwnerBook.BookName,
+			"user_book_picture":         h.OwnerBook.BookPicture,
+			"matched_user_book_name":    h.MatchedBook.BookName,
+			"matched_user_book_picture": h.MatchedBook.BookPicture,
+			"trade_time":                h.TradeTime,
 		})
 	}
 
-	return c.Status(200).JSON(fiber.Map{"histories": histories})
+	return c.Status(200).JSON(fiber.Map{"histories": response})
 }
