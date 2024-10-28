@@ -3,10 +3,10 @@ package endpoint
 import (
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
-	"log"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // All
@@ -43,9 +43,16 @@ func CreateUser(c *fiber.Ctx) error {
 	if err := c.BodyParser(&users); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*users.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Could not hash password"})
+	}
+	hashedPasswordStr := string(hashedPassword)
+	users.Password = &hashedPasswordStr
+
 	if err := database.DB.Create(&users).Error; err != nil {
-		log.Println("Error creating users: %v", err) // Log the error
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create users"})
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create user"})
 	}
 	return c.Status(201).JSON(users)
 }

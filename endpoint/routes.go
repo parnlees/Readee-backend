@@ -65,4 +65,6 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/createMessage", CreateMessage)
 	app.Get("/getAllMessage/:roomId", GetMessagesByRoomId)
 	app.Get("/getAllChat/:userId", GetAllChatByUserId)
+
+	app.Post("/login", Login)
 }
