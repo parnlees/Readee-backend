@@ -16,7 +16,7 @@ func CreateBook(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
 	if err := database.DB.Create(&book).Error; err != nil {
-		log.Println("Error creating book: %v", err) // Log the error
+		log.Printf("Error creating book: %v", err) // Log the error
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create book"})
 	}
 	return c.Status(201).JSON(book)
