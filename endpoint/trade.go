@@ -71,21 +71,14 @@ func AcceptTradeRequest(c *fiber.Ctx) error {
 	// update histories table
 	var history table.History
 	history.OwnerId = match.OwnerId
-	history.OwnerMatchId = match.MatchedUserId
-	history.BookMatchId = match.OwnerBookId
-	history.MatchTime = TimePointer(time.Now())
+	history.MatchedUserId = match.MatchedUserId
 
-	var history2 table.History
-	history2.OwnerId = match.MatchedUserId
-	history2.OwnerMatchId = match.OwnerId
-	history2.BookMatchId = match.MatchedBookId
-	history2.MatchTime = TimePointer(time.Now())
+	history.OwnerBookId = match.OwnerBookId
+	history.MatchedBookId = match.MatchedBookId
+
+	history.TradeTime = TimePointer(time.Now())
 
 	if err := database.DB.Create(&history).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create history"})
-	}
-
-	if err := database.DB.Create(&history2).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create history"})
 	}
 
