@@ -58,7 +58,7 @@ func CreateGenres(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
 	if err := database.DB.Create(&genres).Error; err != nil {
-		log.Println("Error to create genres: %v", err) // Log the error
+		log.Printf("Error to create genres: %v", err) // Log the error
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create genres"})
 	}
 	return c.Status(201).JSON(genres)
