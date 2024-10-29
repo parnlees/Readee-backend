@@ -9,6 +9,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/users", GetUsers)
 	app.Get("/users/:userId", GetUserSpecific)
 	app.Post("/createUser", CreateUser)
+	app.Post("/checkUser", CheckUser)
 
 	app.Get("/genres", GetGenres)
 	app.Get("/genres/:genre_id", GetGenreByID)
@@ -57,9 +58,11 @@ func RegisterRoutes(app *fiber.App) {
 
 	//History
 	app.Get("/history/:userId", GetHistory)
+	app.Get("/tradeCount/:userId", TradeCount)
 
 	//Rating
 	app.Get("/getRating/:userId", GetRatingByUserId)
+	app.Get("/getAverageRate/:userId", GetAverageRatingByUserId)
 
 	//Room
 	app.Post("/createRoom/:senderId/:receiverId", CreateRoom)
@@ -69,4 +72,6 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/createMessage", CreateMessage)
 	app.Get("/getAllMessage/:roomId", GetMessagesByRoomId)
 	app.Get("/getAllChat/:userId", GetAllChatByUserId)
+
+	app.Post("/login", Login)
 }
