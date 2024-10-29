@@ -53,6 +53,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/reviews/received/:userId", GetReceivedReviewsAndRatings)
 	app.Get("/reviews/given/:userId", GetGivenReviewsAndRatingsWithTradedBooks)
 
+	app.Get("/get_review_rating/:giverId/:receiverId", GetReviewRating)
+
 	//History
 	app.Get("/history/:userId", GetHistory)
 

@@ -4,6 +4,7 @@ import (
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -207,4 +208,44 @@ func GetGivenReviewsAndRatingsWithTradedBooks(c *fiber.Ctx) error {
 
 	log.Println("Final response:", response)
 	return c.Status(200).JSON(fiber.Map{"reviews": response})
+}
+
+// Handler function for fetching the rating and review by giverId and receiverId
+func GetReviewRating(c *fiber.Ctx) error {
+	// Parse giverId and receiverId from URL params
+	giverId, err := strconv.ParseUint(c.Params("giverId"), 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid giver ID"})
+	}
+
+	receiverId, err := strconv.ParseUint(c.Params("receiverId"), 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid receiver ID"})
+	}
+
+	// Fetch the review and rating from the database
+	var review table.Review
+	if err := database.DB.Where("giver_id = ? AND receiver_id = ?", giverId, receiverId).First(&review).Error; err != nil {
+		// If no review found, return 404 status
+		if err.Error() == "record not found" {
+			return c.Status(404).JSON(fiber.Map{"error": "Review not found"})
+		}
+		// Other database error
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch review"})
+	}
+
+	// Fetch the rating for the review if it exists
+	var rating table.Rating
+	if err := database.DB.Where("giver_id = ? AND receiver_id = ?", giverId, receiverId).First(&rating).Error; err != nil {
+		if err.Error() == "record not found" {
+			return c.Status(404).JSON(fiber.Map{"error": "Rating not found"})
+		}
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch rating"})
+	}
+
+	// Return the fetched rating and review
+	return c.JSON(fiber.Map{
+		"rating": rating.Score,
+		"review": review.TextReview,
+	})
 }

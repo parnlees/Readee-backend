@@ -1,1 +1,1 @@
-SELECT * FROM matches WHERE matched_user_id = 1 AND owner_id = 7;
+SELECT * FROM users WHERE user_id = <receiver_id>;
