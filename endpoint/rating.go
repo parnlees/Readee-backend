@@ -3,6 +3,7 @@ package endpoint
 import (
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
+	"fmt"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -62,10 +63,13 @@ func GetAverageRatingByUserId(c *fiber.Ctx) error {
 		averageScore = 0
 	}
 
+	// Format the averageScore to two decimal places as a string
+	formattedScore := fmt.Sprintf("%.2f", averageScore)
+
 	// Return the average score as a JSON response
 	return c.Status(200).JSON(fiber.Map{
 		"userId":       userId,
-		"averageScore": averageScore,
+		"averageScore": formattedScore,
 		"count":        count,
 	})
 }
