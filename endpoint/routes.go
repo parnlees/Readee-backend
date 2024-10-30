@@ -2,6 +2,7 @@ package endpoint
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 )
 
 func RegisterRoutes(app *fiber.App) {
@@ -72,6 +73,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/createMessage", CreateMessage)
 	app.Get("/getAllMessage/:roomId", GetMessagesByRoomId)
 	app.Get("/getAllChat/:userId", GetAllChatByUserId)
+	app.Get("/chat/:roomId", websocket.New(Chat))
 
 	app.Post("/login", Login)
 }

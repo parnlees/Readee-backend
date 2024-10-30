@@ -34,6 +34,7 @@ func GetHistory(c *fiber.Ctx) error {
 			"matched_user_book_name":    h.MatchedBook.BookName,
 			"matched_user_book_picture": h.MatchedBook.BookPicture,
 			"trade_time":                h.TradeTime,
+			"owner_id":                  h.OwnerId,
 		})
 	}
 
