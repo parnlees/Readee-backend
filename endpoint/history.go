@@ -28,6 +28,7 @@ func GetHistory(c *fiber.Ctx) error {
 	response := []fiber.Map{}
 	for _, h := range histories {
 		response = append(response, fiber.Map{
+			"history_id":                h.HistoryId,
 			"matched_user_id":           h.MatchedUserId,
 			"user_book_name":            h.OwnerBook.BookName,
 			"user_book_picture":         h.OwnerBook.BookPicture,
