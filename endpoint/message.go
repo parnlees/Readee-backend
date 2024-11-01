@@ -5,7 +5,10 @@ import (
 	"Readee-Backend/type/table"
 	"log"
 	"sync"
+
 	"github.com/gofiber/websocket/v2"
+
+	//"github.com/gorilla/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -31,7 +34,6 @@ func CreateMessage(c *fiber.Ctx) error {
 	return c.Status(201).JSON(message)
 }
 
-
 func GetMessagesByRoomId(c *fiber.Ctx) error {
 	roomId := c.Params("roomId")
 
@@ -53,7 +55,7 @@ func GetMessagesByRoomId(c *fiber.Ctx) error {
 }
 
 var clients = make(map[*websocket.Conn]bool) // Connected clients
-var mu sync.Mutex // Mutex to manage concurrent access
+var mu sync.Mutex                            // Mutex to manage concurrent access
 
 func Chat(c *websocket.Conn) {
 	mu.Lock()
