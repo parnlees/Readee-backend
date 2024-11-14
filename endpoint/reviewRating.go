@@ -72,6 +72,7 @@ func SubmitRatingAndReview(c *fiber.Ctx) error {
 	var newRating = float64(totalScore) / float64(totalNumRate)
 
 	rating := table.Rating{
+		ReviewId:   review.ReviewId,
 		GiverId:    &req.GiverId,
 		ReceiverId: &req.ReceiverId,
 		Rating:     Float64Pointer(newRating),
@@ -96,41 +97,58 @@ func GetAverageRating(c *fiber.Ctx) error {
 	userId := c.Params("userId")
 
 	var rating table.Rating
-	// Get latest rating of that user
-	if err := database.DB.Where("receiver_id = ?", userId).Last(&rating).Error; err != nil {
+	if err := database.DB.Where("receiver_id = ?", userId).Order("created_at desc").First(&rating).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Rating not found"})
 	}
+
 	return c.Status(200).JSON(fiber.Map{
 		"average_rating": rating.Rating,
 	})
 }
 
-// Get rating and review that user got
+// Get review that user got
 func GetReceivedReviewsAndRatings(c *fiber.Ctx) error {
 	userId := c.Params("userId")
 
-	var review []table.Review
-	if err := database.DB.Preload("Giver").Where("receiver_id = ?", userId).Find(&review).Error; err != nil {
+	// Step 1: Retrieve reviews where the user is the receiver
+	var reviews []table.Review
+	err := database.DB.Preload("Giver").Preload("Receiver").Where("receiver_id = ?", userId).Find(&reviews).Error
+	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve reviews"})
 	}
-	if len(review) == 0 {
+	if len(reviews) == 0 {
 		return c.Status(200).JSON(fiber.Map{"message": "No reviews found for this user"})
 	}
 
+	// Step 2: Prepare response with each review and its rating
 	response := []fiber.Map{}
-	for _, r := range review {
-		var rating table.Rating
-		if err := database.DB.Where("giver_id = ? AND receiver_id = ?", r.GiverId, r.ReceiverId).First(&rating).Error; err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve rating"})
+	for _, r := range reviews {
+		// ตรวจสอบว่า Receiver และ Giver ไม่เป็น nil
+		if r.Receiver == nil || r.Giver == nil {
+			log.Println("Skipping review with missing Giver or Receiver")
+			continue
 		}
+
+		// Retrieve rating โดยใช้ ReviewId
+		var rating table.Rating
+		err := database.DB.Where("review_id = ?", r.ReviewId).Find(&rating).Error
+		if err != nil {
+			log.Println("No rating found for review_id =", r.ReviewId)
+			continue
+		}
+
+		// Step 3: Append review and rating to the response
 		response = append(response, fiber.Map{
+			"user_receiver": r.Receiver.Username,
 			"review":        r.TextReview,
-			"rating":        rating.Score,
+			"score":         rating.Score,
 			"giver_name":    r.Giver.Username,
 			"giver_picture": r.Giver.ProfileUrl,
 			"created_at":    r.CreatedAt,
 		})
 	}
+
+	// Step 4: Return the complete response
 	return c.Status(200).JSON(fiber.Map{"reviews": response})
 }
 
@@ -140,14 +158,14 @@ func GetGivenReviewsAndRatingsWithTradedBooks(c *fiber.Ctx) error {
 	log.Println("userId:", userId)
 
 	var reviews []table.Review
-	// Preload "Receiver" เพื่อให้เข้าถึงข้อมูลของ receiver ได้
+	// Preload "Receiver" to access receiver information
 	if err := database.DB.Preload("Receiver").Where("giver_id = ?", userId).Find(&reviews).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve reviews"})
 	}
 
-	// ตรวจสอบว่ามี review หรือไม่
-	log.Println("Retrieved reviews:", reviews)
+	// Check if there are reviews
 	if len(reviews) == 0 {
+		log.Println("No reviews found for user:", userId)
 		return c.Status(200).JSON(fiber.Map{"message": "No reviews found for this user"})
 	}
 
@@ -156,51 +174,36 @@ func GetGivenReviewsAndRatingsWithTradedBooks(c *fiber.Ctx) error {
 		var rating table.Rating
 		var match table.Match
 
-		// Query rating ที่ตรงกับ giver_id และ receiver_id ของ review นั้น ๆ
-		if err := database.DB.Where("giver_id = ? AND receiver_id = ?", *r.GiverId, *r.ReceiverId).First(&rating).Error; err != nil {
-			log.Println("Failed to retrieve rating for giver_id =", *r.GiverId, "receiver_id =", *r.ReceiverId)
+		// Retrieve rating using review_id
+		if err := database.DB.Where("review_id = ?", r.ReviewId).First(&rating).Error; err != nil {
+			log.Println("No rating found for review_id =", r.ReviewId)
 			continue
 		}
-		log.Println("Retrieved rating:", rating)
 
-		// Query match พร้อม preload MatchedBook เพื่อให้สามารถดึงข้อมูลหนังสือของผู้รับมาได้
-		if err := database.DB.Preload("MatchedBook").Where("matched_user_id = ? AND owner_id = ?", *r.ReceiverId, *r.GiverId).First(&match).Error; err != nil {
+		// Retrieve match and preload MatchedBook
+		err := database.DB.Preload("MatchedBook").Where("matched_user_id = ? AND owner_id = ?", *r.ReceiverId, *r.GiverId).First(&match).Error
+		if err != nil {
+			// If no match found, use nil for book details
 			log.Printf("No match found for matched_user_id = %d and owner_id = %d", *r.ReceiverId, *r.GiverId)
-			// หากไม่พบ match ให้ใช้ค่า nil แทน
 			response = append(response, fiber.Map{
 				"receiver_name":         r.Receiver.Username,
 				"receiver_picture":      r.Receiver.ProfileUrl,
 				"receiver_book_picture": nil,
 				"receiver_book_name":    nil,
-				"rating":                rating.Score,
+				"score":                 rating.Score,
 				"review":                r.TextReview,
 				"created_at":            r.CreatedAt,
 			})
 			continue
 		}
 
-		// ตรวจสอบว่า MatchedBook ไม่เป็น nil ก่อนเข้าถึงข้อมูล
-		if match.MatchedBook == nil {
-			log.Println("MatchedBook is nil for match:", match)
-			response = append(response, fiber.Map{
-				"receiver_name":         r.Receiver.Username,
-				"receiver_picture":      r.Receiver.ProfileUrl,
-				"receiver_book_picture": nil,
-				"receiver_book_name":    nil,
-				"rating":                rating.Score,
-				"review":                r.TextReview,
-				"created_at":            r.CreatedAt,
-			})
-			continue
-		}
-
-		// สร้าง response object สำหรับแต่ละรีวิว
+		// Append response for each review and rating
 		response = append(response, fiber.Map{
 			"receiver_name":         r.Receiver.Username,
 			"receiver_picture":      r.Receiver.ProfileUrl,
 			"receiver_book_picture": match.MatchedBook.BookPicture,
 			"receiver_book_name":    match.MatchedBook.BookName,
-			"rating":                rating.Score,
+			"score":                 rating.Score,
 			"review":                r.TextReview,
 			"created_at":            r.CreatedAt,
 		})
@@ -223,18 +226,16 @@ func GetReviewRating(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid receiver ID"})
 	}
 
-	// Fetch the review and rating from the database
+	// Fetch the review from the database
 	var review table.Review
 	if err := database.DB.Where("giver_id = ? AND receiver_id = ?", giverId, receiverId).First(&review).Error; err != nil {
-		// If no review found, return 404 status
 		if err.Error() == "record not found" {
 			return c.Status(404).JSON(fiber.Map{"error": "Review not found"})
 		}
-		// Other database error
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch review"})
 	}
 
-	// Fetch the rating for the review if it exists
+	// Fetch the rating for the review
 	var rating table.Rating
 	if err := database.DB.Where("giver_id = ? AND receiver_id = ?", giverId, receiverId).First(&rating).Error; err != nil {
 		if err.Error() == "record not found" {
