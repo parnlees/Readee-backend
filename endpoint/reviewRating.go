@@ -4,6 +4,7 @@ import (
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
 	"log"
+	"math"
 	"strconv"
 	"time"
 
@@ -69,13 +70,13 @@ func SubmitRatingAndReview(c *fiber.Ctx) error {
 	log.Printf("totalNumRate: %d", totalNumRate)
 	totalScore += req.NewScore
 	log.Printf("totalScore: %d", totalScore)
-	var newRating = float64(totalScore) / float64(totalNumRate)
+	var newRating = int(math.Round(float64(totalScore) / float64(totalNumRate)))
 
 	rating := table.Rating{
 		ReviewId:   review.ReviewId,
 		GiverId:    &req.GiverId,
 		ReceiverId: &req.ReceiverId,
-		Rating:     Float64Pointer(newRating),
+		Rating:     Uint64Pointer(uint64(newRating)),
 		Score:      Uint64Pointer(req.NewScore),
 		NumRate:    Uint64Pointer(totalNumRate),
 		CreatedAt:  TimePointer(time.Now()),
