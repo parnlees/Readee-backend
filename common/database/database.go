@@ -1,10 +1,10 @@
 package database
 
 import (
-	cc "Readee-Backend/common"
 	"Readee-Backend/type/table"
 	"log"
 
+	cc "Readee-Backend/common"
 	//myTypes"Readee-Backend/endpoint"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -40,7 +40,8 @@ func Init() {
 	// }
 
 	// Drop specific table
-	//db.Migrator().DropTable(&table.History{}) // delete table
+	// db.Migrator().DropTable(&table.Rating{})
+	// db.Migrator().DropTable(&table.Review{})
 	// db.Migrator().DropTable("user_genres") // delete joined table
 	// db.Exec("ALTER TABLE logs DROP COLUMN user_like_id")
 

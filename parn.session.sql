@@ -1,1 +1,3 @@
-SELECT * FROM users WHERE user_id = <receiver_id>;
+-- SELECT genre_genre_id FROM user_genres WHERE user_user_id = 7;
+
+SELECT * FROM user_genres WHERE user_user_id = 7;
