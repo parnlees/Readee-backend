@@ -74,13 +74,15 @@ func EditUser(c *fiber.Ctx) error {
 
 	// Parse request body into a temporary struct to avoid overwriting unintended fields
 	var input struct {
-		Email       *string `json:"email"`
-		Username    *string `json:"username"`
-		PhoneNumber *string `json:"phone_number"`
-		ProfileUrl  *string `json:"profile_url"`
-		Firstname   *string `json:"firstname"`
-		Lastname    *string `json:"lastname"`
-		Gender      *string `json:"gender"`
+		Email         *string `json:"email"`
+		Username      *string `json:"username"`
+		PhoneNumber   *string `json:"phone_number"`
+		ProfileUrl    *string `json:"profile_url"`
+		Firstname     *string `json:"firstname"`
+		Lastname      *string `json:"lastname"`
+		Gender        *string `json:"gender"`
+		SecKey        *string `json:"seckey"`
+		RecoverPhrase *string `json:"recoverphrase"`
 	}
 
 	if err := c.BodyParser(&input); err != nil {
@@ -109,6 +111,12 @@ func EditUser(c *fiber.Ctx) error {
 	if input.Gender != nil {
 		user.Gender = input.Gender
 	}
+	if input.SecKey != nil {
+		user.SecKey = input.SecKey
+	}
+	if input.RecoverPhrase != nil {
+		user.RecoverPhrase = input.RecoverPhrase
+	}
 
 	// Save the updated user record
 	if err := database.DB.Save(&user).Error; err != nil {
@@ -117,7 +125,6 @@ func EditUser(c *fiber.Ctx) error {
 
 	return c.JSON(user)
 }
-
 
 func CheckUser(c *fiber.Ctx) error {
 	type Request struct {
@@ -140,9 +147,93 @@ func CheckUser(c *fiber.Ctx) error {
 
 	// Check if the email already exists
 	if err := database.DB.Where("email = ?", req.Email).First(&user).Error; err == nil {
-		return c.Status(409).JSON(fiber.Map{"error": "This email is already registered"})
+		return c.Status(409).JSON(fiber.Map{"error": "This email is already exists"})
 	}
 
 	// If no conflicts, return success message
 	return c.JSON(fiber.Map{"message": "Username and email are available"})
+}
+
+func GetUserInfoByEmail(c *fiber.Ctx) error {
+	type Request struct {
+		Email string `json:"email"` // Expecting email in the request body
+	}
+
+	type Response struct {
+		UserId        *uint64 `json:"user_id"`
+		Email         *string `json:"email"`
+		Username      *string `json:"username"`
+		SecKey        *string `json:"seckey"`
+		RecoverPhrase *string `json:"recover_phrase"`
+	}
+
+	var req Request
+	var user table.User
+
+	// Parse the request body to get the email
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
+	}
+
+	// Check if the email exists in the database
+	if err := database.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	// Build the response
+	response := Response{
+		UserId:        user.UserId,
+		Email:         user.Email,
+		Username:      user.Username,
+		RecoverPhrase: user.RecoverPhrase,
+		SecKey:        user.SecKey,
+	}
+
+	// Return the user information
+	return c.JSON(response)
+}
+
+func ResetPassword(c *fiber.Ctx) error {
+	type Request struct {
+		NewPassword string `json:"new_password"` // Expecting new password in the request body
+	}
+
+	userId, err := strconv.ParseUint(c.Params("userId"), 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
+	}
+
+	var req Request
+	// Parse the request body to get the new password
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
+	}
+
+	// Validate the new password
+	if len(req.NewPassword) < 8 {
+		return c.Status(400).JSON(fiber.Map{"error": "Password must be at least 8 characters long"})
+	}
+
+	// Hash the new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to hash password"})
+	}
+
+	// Retrieve the existing user record
+	var user table.User
+	if err := database.DB.First(&user, userId).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	// Update the password field
+	hashedPasswordStr := string(hashedPassword)
+	user.Password = &hashedPasswordStr
+
+	// Save the updated user record
+	if err := database.DB.Save(&user).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update password"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Password updated successfully"})
 }
