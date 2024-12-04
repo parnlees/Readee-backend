@@ -8,5 +8,6 @@ type Message struct {
 	Room      *Room      `gorm:"foreignKey:RoomId;references:RoomId"`
 	SenderId  *uint64    `gorm:"index;not null"`
 	Message   *string    `gorm:"type:VARCHAR(256);not null"`
+	ImageUrl  *string    `gorm:"type:VARCHAR(512);null"`
 	CreateAt  *time.Time `gorm:"autoCreateTime"`
 }

@@ -73,9 +73,13 @@ func RegisterRoutes(app *fiber.App) {
 
 	//Message
 	app.Post("/createMessage", CreateMessage)
+	app.Post("/messages", CreateMessage)
 	app.Get("/getAllMessage/:roomId", GetMessagesByRoomId)
 	app.Get("/getAllChat/:userId", GetAllChatByUserId)
 	app.Get("/chat/:roomId", websocket.New(Chat))
+	app.Get("/rooms/:roomId/messages", GetMessagesByRoomId)
+	// app.Post("/uploadImage", UploadImageHandler)
+
 
 	app.Post("/login", Login)
 }
