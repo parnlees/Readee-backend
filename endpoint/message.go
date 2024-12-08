@@ -54,16 +54,34 @@ func GetMessagesByRoomId(c *fiber.Ctx) error {
 	return c.Status(200).JSON(messages)
 }
 
-var clients = make(map[*websocket.Conn]bool) // Connected clients
-var mu sync.Mutex                            // Mutex to manage concurrent access
+// var clients = make(map[*websocket.Conn]bool) // Connected clients
+var mu sync.Mutex // Mutex to manage concurrent access
+var rooms = make(map[string]map[*websocket.Conn]bool)
 
 func Chat(c *websocket.Conn) {
+	roomId := c.Params("roomId")
+	if roomId == "" {
+		log.Println("Room ID is missing.")
+		c.Close()
+		return
+	}
+
+	log.Printf("WebSocket connection established for room: %s", roomId)
+
 	mu.Lock()
-	clients[c] = true
+	if rooms[roomId] == nil {
+		rooms[roomId] = make(map[*websocket.Conn]bool)
+	}
+	rooms[roomId][c] = true
 	mu.Unlock()
+
 	defer func() {
+		log.Printf("WebSocket connection closed for room: %s", roomId)
 		mu.Lock()
-		delete(clients, c)
+		delete(rooms[roomId], c)
+		if len(rooms[roomId]) == 0 {
+			delete(rooms, roomId)
+		}
 		mu.Unlock()
 		c.Close()
 	}()
@@ -71,16 +89,20 @@ func Chat(c *websocket.Conn) {
 	for {
 		var message table.Message
 		if err := c.ReadJSON(&message); err != nil {
-			log.Printf("Error reading message: %v", err)
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				log.Println("WebSocket closed normally.")
+			} else {
+				log.Printf("Error reading message: %v", err)
+			}
 			break
 		}
 
 		mu.Lock()
-		for client := range clients {
+		for client := range rooms[roomId] {
 			if err := client.WriteJSON(message); err != nil {
 				log.Printf("Error sending message: %v", err)
 				client.Close()
-				delete(clients, client)
+				delete(rooms[roomId], client)
 			}
 		}
 		mu.Unlock()
