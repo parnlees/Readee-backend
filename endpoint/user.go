@@ -1,13 +1,17 @@
 package endpoint
 
 import (
+	"Readee-Backend/common/config"
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
+	"errors"
 	"log"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/patrickmn/go-cache"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // All
@@ -24,18 +28,53 @@ func GetUsers(c *fiber.Ctx) error {
 
 // Specific
 func GetUserSpecific(c *fiber.Ctx) error {
+	// 1. ตรวจสอบและแปลง userId จาก URL
 	userId, err := strconv.ParseUint(c.Params("userId"), 10, 64)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid user ID format",
+			"error":   err.Error(),
+		})
 	}
 
+	// 2. ตรวจสอบข้อมูลจาก Cache ก่อน
+	cachedUser, found := config.AppCache.Get(strconv.FormatUint(userId, 10))
+	if found {
+		return c.JSON(fiber.Map{
+			"status": "success",
+			"source": "cache",
+			"user":   cachedUser,
+		})
+	}
+
+	// 3. ดึงข้อมูลจากฐานข้อมูล (กรณี Cache Miss)
 	var user table.User
-	// Find user by userId
 	if err := database.DB.First(&user, userId).Error; err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+		if errors.Is(err, gorm.ErrRecordNotFound) { // ตรวจสอบว่าข้อมูลไม่พบ
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"status":  "error",
+				"message": "User not found",
+			})
+		}
+
+		// กรณีอื่นๆ เช่น ฐานข้อมูลล้มเหลว
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Failed to retrieve user data",
+			"error":   err.Error(),
+		})
 	}
 
-	return c.JSON(user)
+	// 4. เก็บข้อมูลลงใน Cache
+	config.AppCache.Set(strconv.FormatUint(userId, 10), user, cache.DefaultExpiration)
+
+	// 5. ส่งข้อมูลกลับให้ผู้ใช้
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"source": "database",
+		"user":   user,
+	})
 }
 
 func CreateUser(c *fiber.Ctx) error {

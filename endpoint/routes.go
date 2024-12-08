@@ -28,7 +28,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Delete("/deleteBook/:BookId", DeleteBook)
 	app.Get("/getBookByUser/:OwnerId", GetBookByOwnerId)
 
-	app.Get("/books/recommendations", getBooksForUser)
+	app.Get("/books/recommendations/:userId", getBooksForUser)
 
 	// Log
 	app.Post("/books/:bookId/like/:userId", LikeBook)

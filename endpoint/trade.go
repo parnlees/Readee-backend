@@ -1,13 +1,16 @@
 package endpoint
 
 import (
+	"Readee-Backend/common/config"
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
+	"fmt"
 	"time"
 
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/patrickmn/go-cache"
 )
 
 // 1st : pending
@@ -32,7 +35,7 @@ func SendTradeRequest(c *fiber.Ctx) error {
 	return c.Status(200).JSON(fiber.Map{"message": "Trade request sent", "match": match})
 }
 
-// 2nd : accept
+// 2nd : accept NO CACHE
 func AcceptTradeRequest(c *fiber.Ctx) error {
 	var match table.Match
 	matchId := c.Params("matchId")
@@ -82,6 +85,19 @@ func AcceptTradeRequest(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create history"})
 	}
 
+	// Update cache for both users
+	matchCacheKey := fmt.Sprintf("user_%d_matches", match.OwnerId)
+	if cachedMatches, found := config.AppCache.Get(matchCacheKey); found {
+		for i, cachedMatch := range cachedMatches.([]table.Match) {
+			if cachedMatch.MatchId == match.MatchId {
+				cachedMatches.([]table.Match)[i] = match // อัปเดตแมทช์ในแคช
+				break
+			}
+		}
+		// Set
+		config.AppCache.Set(matchCacheKey, cachedMatches, cache.DefaultExpiration)
+	}
+
 	return c.Status(200).JSON(fiber.Map{"message": "Trade request accepted", "match": match})
 }
 
@@ -113,6 +129,7 @@ func RejectTradeRequest(c *fiber.Ctx) error {
 	return c.Status(200).JSON(fiber.Map{"message": "Trade request rejected", "match": match})
 }
 
+// no need cache
 func CancelTradeRequest(c *fiber.Ctx) error {
 	var match table.Match
 	matchId := c.Params("matchId")
