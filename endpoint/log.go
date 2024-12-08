@@ -1,14 +1,17 @@
 package endpoint
 
 import (
+	"Readee-Backend/common/config"
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
+	"fmt"
 	"log"
 	"time"
 
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/patrickmn/go-cache"
 	"gorm.io/gorm"
 )
 
@@ -41,12 +44,30 @@ func LikeBook(c *fiber.Ctx) error {
 		}
 	}()
 
+	// Check if the like already exists in the cache
+	cacheKey := fmt.Sprintf("user_%d_likes", userId)
+	cachedLikes, found := config.AppCache.Get(cacheKey)
+	if found {
+		// If the like already exists in the cache, check if it's already present
+		if cachedLikes, ok := cachedLikes.([]table.Log); ok {
+			for _, log := range cachedLikes {
+				if *log.BookLikeId == uint64(bookId) {
+					return c.Status(200).JSON(fiber.Map{"error": "This log already exists"})
+				}
+			}
+		} else {
+			return c.Status(500).JSON(fiber.Map{"error": "Cache data format mismatch"})
+		}
+	}
+
+	// Query if log exists in the database
 	var existingLog table.Log
 	if err := tx.Where("liker_id = ? AND book_like_id = ?", userId, bookId).First(&existingLog).Error; err == nil {
 		tx.Rollback()
 		return c.Status(200).JSON(fiber.Map{"error": "This log already exists"})
 	}
 
+	// Create the new log for the like
 	newLog := table.Log{
 		LikerId:    Uint64Pointer(uint64(userId)),
 		BookLikeId: Uint64Pointer(uint64(bookId)),
@@ -60,62 +81,108 @@ func LikeBook(c *fiber.Ctx) error {
 	}
 	log.Println("newLog is ", newLog)
 
-	var book table.Book
-	if err := tx.Preload("Owner").Where("book_id = ?", *newLog.BookLikeId).First(&book).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Book not found"})
-	}
-	log.Println("book is ", book)
-	// เจ้าของหนังสือ
-	bookOwnerId := *book.OwnerId
-
-	// Get all books liked by the book owner
-	var likedBooks []table.Log
-	if err := tx.Where("liker_id = ? AND liked = ?", bookOwnerId, true).Find(&likedBooks).Error; err != nil {
-		tx.Rollback()
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve liked books"})
-	}
-	log.Println("likedBooks are ", likedBooks)
-
-	// check ว่ามีการไลค์จากอีกฝั่งไหม
-	for range likedBooks {
-		var mutualLogs []table.Log
-		// Find all logs where the owner of the book has liked any books of the user
-		if err := tx.Joins("JOIN books ON books.book_id = logs.book_like_id").
-			Where("logs.liker_id = ? AND books.owner_id = ? AND logs.liked = ?", bookOwnerId, userId, true).
-			Find(&mutualLogs).Error; err != nil {
-			log.Println("Error fetching mutual likes: ", err)
-			continue
+	// Check if the like was created successfully
+	// Add new like to cache
+	if found {
+		if cachedLikes, ok := cachedLikes.([]table.Log); ok {
+			cachedLikes = append(cachedLikes, newLog)
+			config.AppCache.Set(cacheKey, cachedLikes, cache.DefaultExpiration)
+		} else {
+			return c.Status(500).JSON(fiber.Map{"error": "Cache data format mismatch"})
 		}
+	} else {
+		cachedLikes = []table.Log{newLog}
+		config.AppCache.Set(cacheKey, cachedLikes, cache.DefaultExpiration)
+	}
 
-		for _, mutualLog := range mutualLogs {
-			log.Println("mutualLog is ", mutualLog)
+	// Use cache for checking match
+	matchCacheKey := fmt.Sprintf("user_%d_matches", userId)
+	cachedMatches, matchFound := config.AppCache.Get(matchCacheKey)
+	if matchFound {
+		if cachedMatches, ok := cachedMatches.([]table.Match); ok {
+			for _, cachedMatch := range cachedMatches {
+				if *cachedMatch.OwnerBookId == uint64(bookId) {
+					log.Println("Match found in cache: ", cachedMatch)
+					// Return cached match (optional, based on your needs)
+				}
+			}
+		} else {
+			return c.Status(500).JSON(fiber.Map{"error": "Cache data format mismatch for matches"})
+		}
+	} else {
+		// If no cache, query the database for mutual matches
+		var book table.Book
+		if err := tx.Preload("Owner").Where("book_id = ?", *newLog.BookLikeId).First(&book).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Book not found"})
+		}
+		log.Println("book is ", book)
+		// เจ้าของหนังสือ
+		bookOwnerId := *book.OwnerId
 
-			var existingMatch table.Match
-			if err := tx.Where("(owner_book_id = ? AND matched_book_id = ?) OR (owner_book_id = ? AND matched_book_id = ?)",
-				bookId, *mutualLog.BookLikeId, *mutualLog.BookLikeId, bookId).
-				First(&existingMatch).Error; err == nil {
-				log.Println("Match already exists: ", existingMatch)
+		// Get all books liked by the book owner
+		var likedBooks []table.Log
+		if err := tx.Where("liker_id = ? AND liked = ?", bookOwnerId, true).Find(&likedBooks).Error; err != nil {
+			tx.Rollback()
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve liked books"})
+		}
+		log.Println("likedBooks are ", likedBooks)
+
+		// Check if there are any mutual likes
+		for range likedBooks {
+			var mutualLogs []table.Log
+			// Find mutual likes
+			if err := tx.Joins("JOIN books ON books.book_id = logs.book_like_id").
+				Where("logs.liker_id = ? AND books.owner_id = ? AND logs.liked = ?", bookOwnerId, userId, true).
+				Find(&mutualLogs).Error; err != nil {
+				log.Println("Error fetching mutual likes: ", err)
 				continue
 			}
 
-			// Create the match
-			newMatch := table.Match{
-				OwnerId:       Uint64Pointer(uint64(userId)),
-				MatchedUserId: mutualLog.LikerId,
-				OwnerBookId:   mutualLog.BookLikeId,
-				MatchedBookId: Uint64Pointer(uint64(bookId)),
+			for _, mutualLog := range mutualLogs {
+				log.Println("mutualLog is ", mutualLog)
+
+				var existingMatch table.Match
+				if err := tx.Where("(owner_book_id = ? AND matched_book_id = ?) OR (owner_book_id = ? AND matched_book_id = ?)",
+					bookId, *mutualLog.BookLikeId, *mutualLog.BookLikeId, bookId).
+					First(&existingMatch).Error; err == nil {
+					log.Println("Match already exists: ", existingMatch)
+					continue
+				}
+
+				// Create the match
+				newMatch := table.Match{
+					OwnerId:       Uint64Pointer(uint64(userId)),
+					MatchedUserId: mutualLog.LikerId,
+					OwnerBookId:   mutualLog.BookLikeId,
+					MatchedBookId: Uint64Pointer(uint64(bookId)),
+				}
+				if err := tx.Create(&newMatch).Error; err != nil {
+					tx.Rollback()
+					return c.Status(500).JSON(fiber.Map{"error": "Failed to create match"})
+				}
+				log.Printf("Match created: %+v\n", newMatch)
+
+				// Cache the new match
+				if matchFound {
+					if cachedMatches, ok := cachedMatches.([]table.Match); ok {
+						cachedMatches = append(cachedMatches, newMatch)
+						config.AppCache.Set(matchCacheKey, cachedMatches, cache.DefaultExpiration)
+					} else {
+						return c.Status(500).JSON(fiber.Map{"error": "Cache data format mismatch"})
+					}
+				} else {
+					cachedMatches = []table.Match{newMatch}
+					config.AppCache.Set(matchCacheKey, cachedMatches, cache.DefaultExpiration)
+				}
 			}
-			if err := tx.Create(&newMatch).Error; err != nil {
-				tx.Rollback()
-				return c.Status(500).JSON(fiber.Map{"error": "Failed to create match"})
-			}
-			log.Printf("Match created: %+v\n", newMatch)
 		}
 	}
 
+	// Commit the transaction
 	if err := tx.Commit().Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to commit transaction"})
 	}
+
 	return c.Status(201).JSON(fiber.Map{"message": "Log created successfully"})
 }
 
@@ -164,6 +231,7 @@ func GetLogsByUserID(c *fiber.Ctx) error {
 	return c.JSON(logs)
 }
 
+// unlike no need cache
 func UnlikeLogs(c *fiber.Ctx) error {
 	// Parse bookLikeId and likerId from the URL parameters
 	bookLikeId, err := strconv.ParseUint(c.Params("bookLikeId"), 10, 64)

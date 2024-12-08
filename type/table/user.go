@@ -18,6 +18,7 @@ type User struct {
 	VerifyStatus *bool      `gorm:"default:true"` // Many-to-Many relationship
 	CreatedAt    *time.Time `gorm:"autoCreateTime"`
 	UpdatedAt    *time.Time `gorm:"autoCreateTime"`
+	SecKey       *string    `gorm:"type:VARCHAR(256)"`
 
 	Genres []*Genre `gorm:"many2many:user_genres;"`
 }

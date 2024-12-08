@@ -3,11 +3,13 @@ package database
 import (
 	"Readee-Backend/type/table"
 	"log"
+	"os"
 
 	cc "Readee-Backend/common"
 	//myTypes"Readee-Backend/endpoint"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	
 )
 
 var DB *gorm.DB
@@ -27,6 +29,10 @@ func Init() {
 		log.Println("connect to database success")
 
 		DB = db
+	}
+
+	if os.Getenv("ENV") == "development" {
+		DB = DB.Debug()
 	}
 
 	// Drop all tables
