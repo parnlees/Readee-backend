@@ -25,17 +25,17 @@ func UploadImage(file *multipart.FileHeader) (string, error) {
 		return "", fmt.Errorf("Azure Storage account credentials not set")
 	}
 
-	// Create a credential object
+	// Create a credential object for Azure
 	cred, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Printf("Failed to create Azure credential: %v", err)
 		return "", err
 	}
 
-	// Define the service URL
+	// Define the service URL for Azure Blob Storage
 	serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net/", accountName)
 
-	// Create a blob service client
+	// Create a Blob Service client
 	client, err := azblob.NewClientWithSharedKeyCredential(serviceURL, cred, nil)
 	if err != nil {
 		log.Printf("Failed to create Azure blob client: %v", err)
@@ -49,10 +49,10 @@ func UploadImage(file *multipart.FileHeader) (string, error) {
 	// Get the container client
 	containerClient := client.ServiceClient().NewContainerClient(containerName)
 
-	// Create a blob client
+	// Create a blob client for the file upload
 	blobClient := containerClient.NewBlockBlobClient(blobName)
 
-	// Open the file to upload
+	// Open the file for reading
 	fileReader, err := file.Open()
 	if err != nil {
 		log.Printf("Failed to open file: %v", err)
@@ -60,46 +60,77 @@ func UploadImage(file *multipart.FileHeader) (string, error) {
 	}
 	defer fileReader.Close()
 
-	// Upload the file
+	// Upload the file to Azure Blob Storage
 	_, err = blobClient.Upload(context.Background(), fileReader, nil)
 	if err != nil {
 		log.Printf("Failed to upload file: %v", err)
 		return "", err
 	}
 
-	// Return the blob's URL
-	return blobClient.URL(), nil
+	// Generate the URL of the uploaded image
+	imageUrl := blobClient.URL()
+
+	// Log the URL of the uploaded image
+	log.Printf("Image uploaded successfully url = %s", imageUrl)
+
+	// Return the URL of the uploaded image
+	return imageUrl, nil
 }
 
 func CreateMessage(c *fiber.Ctx) error {
-	// Handle file upload for image messages
-	file, err := c.FormFile("file")
-	var imageUrl *string
+    // Handle file upload for image messages
+    file, err := c.FormFile("file")
+    var imageUrl *string
 
-	if err == nil && file != nil {
-		uploadedURL, err := UploadImage(file)
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "Failed to upload image"})
-		}
-		imageUrl = &uploadedURL
-	}
+    // If there is a file, upload it to Azure
+    if err == nil && file != nil {
+        // Log the file details for debugging
+        log.Printf("Uploading file: %s", file.Filename)
 
-	var message table.Message
-	if err := c.BodyParser(&message); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
-	}
+        uploadedURL, err := UploadImage(file) // Upload the image
+        if err != nil {
+            log.Printf("Error uploading image: %v", err)
+            return c.Status(500).JSON(fiber.Map{"error": "Failed to upload image"})
+        }
 
-	// Add the image URL to the message if present
-	message.ImageUrl = imageUrl
+        // If the image is uploaded successfully, store the URL
+        imageUrl = &uploadedURL // Set the image URL
+        log.Printf("Image uploaded successfully, URL: %s", *imageUrl)
+    } else {
+        log.Println("No file received or error in file handling")
+    }
 
-	// Save the message to the database
-	if err := database.DB.Create(&message).Error; err != nil {
-		log.Printf("Error creating message: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create message"})
-	}
+    // Parse the rest of the message data
+    var message table.Message
+    if err := c.BodyParser(&message); err != nil {
+        log.Printf("Error parsing message body: %v", err)
+        return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+    }
 
-	return c.Status(201).JSON(message)
+    // If there was an image, add the URL to the message
+    if imageUrl != nil {
+        message.ImageUrl = imageUrl
+        log.Printf("Assigned Image URL to message: %s", *imageUrl)
+    }
+
+    // Log the message data before saving it
+    log.Printf("Saving message: %+v", message)
+
+    // Save the message (including the image URL) to the database
+    if err := database.DB.Create(&message).Error; err != nil {
+        log.Printf("Error saving message: %v", err)
+        return c.Status(500).JSON(fiber.Map{"error": "Failed to create message"})
+    }
+
+    // Log the saved message
+    log.Printf("Message saved successfully: %+v", message)
+
+    // Return the message data with the image URL
+    return c.Status(201).JSON(fiber.Map{
+        "imageUrl": message.ImageUrl, // Include the message data
+    })
 }
+
 
 func GetMessagesByRoomId(c *fiber.Ctx) error {
 	roomId := c.Params("roomId")
