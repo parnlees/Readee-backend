@@ -110,48 +110,65 @@ func GetBookByOwnerId(c *fiber.Ctx) error {
 
 // Pagination
 func getBooksForUser(c *fiber.Ctx) error {
-	userID := c.Query("userID")
+	log.Println("Request received for /books/recommendations/:userId")
+	log.Printf("Incoming request: %s %s", c.Method(), c.Path())
+
+	// ตรวจสอบ userID
+	userID := c.Params("userID")
 	if userID == "" {
+		log.Println("Error: userID is required")
 		return sendResponse(c, nil, "userID is required", false)
 	}
+	log.Printf("Received userID: %s", userID)
 
 	userIDInt, err := strconv.Atoi(userID)
 	if err != nil {
+		log.Printf("Error: Invalid userID: %s", err)
 		return sendResponse(c, nil, "Invalid userID", false)
 	}
 
+	// ตรวจสอบ query parameters
 	offset, _ := strconv.Atoi(c.Query("offset", "0"))
 	limit, _ := strconv.Atoi(c.Query("limit", "10"))
 	page := (offset / limit) + 1
 	random := c.Query("random", "false") == "true"
 
+	log.Printf("Pagination - Offset: %d, Limit: %d, Page: %d, Random: %v", offset, limit, page, random)
+
+	// ดึง genres ของ user
 	var userGenres []uint64
 	if err := database.DB.Table("user_genres").
 		Where("user_user_id = ?", userIDInt).
 		Pluck("genre_genre_id", &userGenres).Error; err != nil {
+		log.Printf("Error fetching user genres: %s", err)
 		return handleError(c, err, "Failed to fetch user genres", 500)
 	}
+	log.Printf("User genres: %v", userGenres)
 
 	if len(userGenres) == 0 {
+		log.Println("No genres found for user")
 		return sendResponse(c, fiber.Map{"books": []table.Book{}}, "No genres found for user", true)
 	}
 
+	// ดึง books ที่ user like แล้ว
 	var likedBookIDs []uint64
-	//likedBookIDs = cache.Get("user_liked_books_" + userID)
 	if err := database.DB.Table("logs").
-		Where("liker_id = ?", userID).
+		Where("liker_id = ?", userIDInt).
 		Pluck("book_like_id", &likedBookIDs).Error; err != nil {
+		log.Printf("Error fetching liked books: %s", err)
 		return handleError(c, err, "Failed to fetch liked books", 500)
 	}
+	log.Printf("Liked book IDs: %v", likedBookIDs)
 
 	if len(likedBookIDs) == 0 {
-		likedBookIDs = []uint64{0}
+		likedBookIDs = []uint64{0} // ป้องกัน error กรณี likedBookIDs ว่าง
 	}
 
+	// ดึง books
 	var books []table.Book
 	query := database.DB.Table("books").
 		Where("genre_id IN (?)", userGenres).
-		Where("owner_id != ?", userID).
+		Where("owner_id != ?", userIDInt).
 		Where("is_traded = false").
 		Where("book_id NOT IN (?)", likedBookIDs).
 		Offset(offset).
@@ -162,14 +179,19 @@ func getBooksForUser(c *fiber.Ctx) error {
 	}
 
 	if err := query.Find(&books).Error; err != nil {
+		log.Printf("Error fetching books: %s", err)
 		return handleError(c, err, "Failed to fetch books", 500)
 	}
+	log.Printf("Books fetched: %v", books)
 
+	// คำนวณ Pagination
 	pagination, err := calculatePagination("books", limit, page, database.DB)
 	if err != nil {
+		log.Printf("Error calculating pagination: %s", err)
 		return handleError(c, err, "Failed to calculate pagination", 500)
 	}
 
+	// ส่ง Response กลับ
 	return sendResponse(c, fiber.Map{
 		"books":      books,
 		"pagination": pagination,
