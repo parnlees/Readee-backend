@@ -9,7 +9,6 @@ import (
 	//myTypes"Readee-Backend/endpoint"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	
 )
 
 var DB *gorm.DB
@@ -46,7 +45,7 @@ func Init() {
 	// }
 
 	// Drop specific table
-	// db.Migrator().DropTable(&table.Rating{})
+	// db.Migrator().DropTable(&table.Banners_display{})
 	// db.Migrator().DropTable(&table.Review{})
 	// db.Migrator().DropTable("user_genres") // delete joined table
 	// db.Exec("ALTER TABLE logs DROP COLUMN user_like_id")
@@ -63,4 +62,6 @@ func Init() {
 	cc.DB.AutoMigrate(&table.Rating{})
 	cc.DB.AutoMigrate(&table.Review{})
 	cc.DB.AutoMigrate(&table.Report{})
+	// cc.DB.AutoMigrate(&table.Banners{})
+	// cc.DB.AutoMigrate(&table.Banners_display{})
 }
