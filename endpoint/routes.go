@@ -98,5 +98,9 @@ func RegisterRoutes(app *fiber.App) {
 		return c.JSON(fiber.Map{"url": url}) // Send the URL as response
 	})
 
+	//ads banner
+	app.Get("/getALlAds", GetAllAds)
+	
+
 	app.Post("/login", Login)
 }
