@@ -106,5 +106,9 @@ func Chat(c *websocket.Conn) {
 			}
 		}
 		mu.Unlock()
+
+		if err := database.DB.Create(&message).Error; err != nil {
+			log.Printf("Error saving message to database: %v", err)
+		}
 	}
 }
