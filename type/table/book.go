@@ -15,7 +15,9 @@ type Book struct {
 	BookDescription *string    `gorm:"type:VARCHAR(256);not null"`
 	GenreId         *uint64    `gorm:"not null"`
 	Quality         *uint64    `gorm:"not null"`
-	IsTraded        *bool      `gorm:"default:true"`
+	IsTraded        *bool      `gorm:"default:false"`
 	CreatedAt       *time.Time `gorm:"autoCreateTime"`
 	UpdatedAt       *time.Time `gorm:"autoUpdateTime"`
+	IsReported      *bool      `gorm:"default:false"`
+	ExpiredDate     *time.Time `gorm:"autoCreateTime"`
 }
