@@ -76,9 +76,32 @@ func RegisterRoutes(app *fiber.App) {
 
 	//Message
 	app.Post("/createMessage", CreateMessage)
+
+	// app.Post("/messages", CreateMessage)
 	app.Get("/getAllMessage/:roomId", GetMessagesByRoomId)
 	app.Get("/getAllChat/:userId", GetAllChatByUserId)
 	app.Get("/chat/:roomId", websocket.New(Chat))
+	app.Get("/rooms/:roomId/messages", GetMessagesByRoomId)
+	app.Post("/uploadImage", func(c *fiber.Ctx) error {
+		// Get the file from the request
+		file, err := c.FormFile("file")
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString(err.Error()) // If no file is uploaded or error occurs
+		}
+
+		// Upload the image to Azure and get the URL
+		url, err := UploadImage(file)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString(err.Error()) // If image upload to Azure fails
+		}
+
+		// Return the URL of the uploaded image
+		return c.JSON(fiber.Map{"url": url}) // Send the URL as response
+	})
+
+	//ads banner
+	app.Get("/getALlAds", GetAllAds)
+	
 
 	app.Post("/login", Login)
 

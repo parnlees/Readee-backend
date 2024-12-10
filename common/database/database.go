@@ -45,7 +45,7 @@ func Init() {
 	// }
 
 	// Drop specific table
-	// db.Migrator().DropTable(&table.Rating{})
+	// db.Migrator().DropTable(&table.Banners_display{})
 	// db.Migrator().DropTable(&table.Review{})
 	// db.Migrator().DropTable("user_genres") // delete joined table
 	// db.Exec("ALTER TABLE logs DROP COLUMN user_like_id")
@@ -63,4 +63,6 @@ func Init() {
 	cc.DB.AutoMigrate(&table.Review{})
 	cc.DB.AutoMigrate(&table.Notification{})
 	cc.DB.AutoMigrate(&table.Report{})
+	// cc.DB.AutoMigrate(&table.Banners{})
+	// cc.DB.AutoMigrate(&table.Banners_display{})
 }

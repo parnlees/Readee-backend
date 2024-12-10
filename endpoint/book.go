@@ -108,7 +108,13 @@ func GetBookByOwnerId(c *fiber.Ctx) error {
 	return c.JSON(books)
 }
 
-// Pagination
+// สร้าง struct เพื่อเก็บข้อมูล genre และจำนวนของมัน
+type GenreCount struct {
+	GenreId    uint64 `json:"genre_id"`
+	TotalBooks int    `json:"total_books"`
+	LikedBooks int    `json:"liked_books"`
+}
+
 func getBooksForUser(c *fiber.Ctx) error {
 	log.Println("Request received for /books/recommendations/:userId")
 	log.Printf("Incoming request: %s %s", c.Method(), c.Path())
@@ -129,26 +135,11 @@ func getBooksForUser(c *fiber.Ctx) error {
 
 	// ตรวจสอบ query parameters
 	offset, _ := strconv.Atoi(c.Query("offset", "0"))
-	limit, _ := strconv.Atoi(c.Query("limit", "10"))
+	limit, _ := strconv.Atoi(c.Query("limit", "20")) // 20 เล่มในหนึ่งครั้ง
 	page := (offset / limit) + 1
 	random := c.Query("random", "false") == "true"
 
 	log.Printf("Pagination - Offset: %d, Limit: %d, Page: %d, Random: %v", offset, limit, page, random)
-
-	// ดึง genres ของ user
-	var userGenres []uint64
-	if err := database.DB.Table("user_genres").
-		Where("user_user_id = ?", userIDInt).
-		Pluck("genre_genre_id", &userGenres).Error; err != nil {
-		log.Printf("Error fetching user genres: %s", err)
-		return handleError(c, err, "Failed to fetch user genres", 500)
-	}
-	log.Printf("User genres: %v", userGenres)
-
-	if len(userGenres) == 0 {
-		log.Println("No genres found for user")
-		return sendResponse(c, fiber.Map{"books": []table.Book{}}, "No genres found for user", true)
-	}
 
 	// ดึง books ที่ user like แล้ว
 	var likedBookIDs []uint64
@@ -164,13 +155,10 @@ func getBooksForUser(c *fiber.Ctx) error {
 		likedBookIDs = []uint64{0} // ป้องกัน error กรณี likedBookIDs ว่าง
 	}
 
-	// ดึง books
+	// ดึง books ที่ user จะได้เห็นใน stack
 	var books []table.Book
 	query := database.DB.Table("books").
-		Where("genre_id IN (?)", userGenres).
-		Where("owner_id != ?", userIDInt).
-		Where("is_traded = false").
-		Where("book_id NOT IN (?)", likedBookIDs).
+		Where("book_id NOT IN (?)", likedBookIDs). // Exclude already liked books
 		Offset(offset).
 		Limit(limit)
 
@@ -178,11 +166,30 @@ func getBooksForUser(c *fiber.Ctx) error {
 		query = query.Order("RAND()")
 	}
 
+	// ดึง books
 	if err := query.Find(&books).Error; err != nil {
 		log.Printf("Error fetching books: %s", err)
 		return handleError(c, err, "Failed to fetch books", 500)
 	}
 	log.Printf("Books fetched: %v", books)
+
+	// เช็คจำนวนไลค์จาก 20 เล่มใน stack
+	likedBooksCount := 0
+	for _, book := range books {
+		for _, likedBookID := range likedBookIDs {
+			if *book.BookId == likedBookID {
+				likedBooksCount++
+				break
+			}
+		}
+	}
+
+	// เช็คว่าไลค์มากกว่า 50% หรือไม่ (อย่างน้อย 10 เล่ม)
+	if likedBooksCount < 10 {
+		log.Printf("User liked less than 50%% of books in stack: %d liked out of %d", likedBooksCount, limit)
+		// ส่งผลการถามผู้ใช้ว่าจะเปลี่ยน genre หรือไม่
+		return sendResponse(c, nil, "Would you like to change genre?", false)
+	}
 
 	// คำนวณ Pagination
 	pagination, err := calculatePagination("books", limit, page, database.DB)

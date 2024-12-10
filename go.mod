@@ -9,6 +9,8 @@ require (
 )
 
 require (
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.16.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
@@ -30,6 +32,7 @@ require (
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gofiber/utils v0.0.10 // indirect
 	github.com/gorilla/schema v1.1.0 // indirect
+	github.com/jinzhu/gorm v1.9.16 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
@@ -42,12 +45,13 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	golang.org/x/arch v0.8.0 // indirect
-	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/net v0.29.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.5.0
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-redis/redis v6.15.9+incompatible
@@ -57,7 +61,7 @@ require (
 	github.com/gofiber/websocket v0.5.1
 	github.com/gofiber/websocket/v2 v2.2.1
 	github.com/golang-jwt/jwt/v4 v4.5.0
-	github.com/google/uuid v1.5.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -76,9 +80,9 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.51.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
-	golang.org/x/crypto v0.27.0 // indirect
-	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/crypto v0.29.0 // indirect
+	golang.org/x/sync v0.9.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
+	golang.org/x/text v0.20.0 // indirect
 	gorm.io/driver/mysql v1.5.7 // indirect
 )
