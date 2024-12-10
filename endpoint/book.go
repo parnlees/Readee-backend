@@ -124,7 +124,7 @@ func getBooksForUser(c *fiber.Ctx) error {
 		log.Println("Failed to fetch user genres:", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch user genres"})
 	}
- 
+
 	if len(userGenres) == 0 {
 		log.Println("No genres found for user:", userID)
 		return c.Status(200).JSON(fiber.Map{
@@ -171,4 +171,26 @@ func getBooksForUser(c *fiber.Ctx) error {
 	log.Printf("Fetched %d books for user %s\n", len(books), userID)
 
 	return c.Status(200).JSON(fiber.Map{"books": books})
+}
+
+func getReportBook(c *fiber.Ctx) error {
+	// Parse userId from the route parameters
+	userId := c.Params("userId")
+
+	// Initialize a slice to store the books
+	var books []table.Book
+
+	// Query the database for books where IsReported is true and match the OwnerId
+	if err := database.DB.Where("is_reported = ? AND owner_id = ?", true, userId).Find(&books).Error; err != nil {
+		log.Printf("Failed to fetch reported books for user %s: %v", userId, err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch reported books"})
+	}
+
+	// Check if any books were found
+	// if len(books) == 0 {
+	//     return c.Status(404).JSON(fiber.Map{"message": "No reported books found for this user"})
+	// }
+
+	// Return the reported books
+	return c.Status(200).JSON(books)
 }
