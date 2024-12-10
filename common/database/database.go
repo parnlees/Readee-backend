@@ -9,7 +9,6 @@ import (
 	//myTypes"Readee-Backend/endpoint"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	
 )
 
 var DB *gorm.DB
@@ -62,5 +61,6 @@ func Init() {
 	cc.DB.AutoMigrate(&table.History{})
 	cc.DB.AutoMigrate(&table.Rating{})
 	cc.DB.AutoMigrate(&table.Review{})
+	cc.DB.AutoMigrate(&table.Notification{})
 	cc.DB.AutoMigrate(&table.Report{})
 }
