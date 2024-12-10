@@ -29,7 +29,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getBookByUser/:OwnerId", GetBookByOwnerId)
 	app.Get("/reportedBooks/:userId", getReportBook)
 
-	app.Get("/books/recommendations", getBooksForUser)
+	app.Get("/books/recommendations/:userId", getBooksForUser)
 
 	// Log
 	app.Post("/books/:bookId/like/:userId", LikeBook)
