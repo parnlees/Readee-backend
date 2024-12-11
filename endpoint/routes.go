@@ -32,7 +32,7 @@ func RegisterRoutes(app *fiber.App) {
 
 	// Log
 	app.Post("/books/:bookId/like/:userId", LikeBook)
-	app.Post("/books/:bookId/unlike/:userId", UnLikeBook)
+	app.Post("/books/:bookId/unlike/:userId", UnLikeBooks)
 	app.Get("/getLogs/:liker_id", GetLogsByUserID)
 	app.Post("/unlikeLogs/:bookLikeId/:likerId", UnlikeLogs)
 

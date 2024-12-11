@@ -108,13 +108,8 @@ func GetBookByOwnerId(c *fiber.Ctx) error {
 	return c.JSON(books)
 }
 
-// สร้าง struct เพื่อเก็บข้อมูล genre และจำนวนของมัน
-type GenreCount struct {
-	GenreId    uint64 `json:"genre_id"`
-	TotalBooks int    `json:"total_books"`
-	LikedBooks int    `json:"liked_books"`
-}
-
+// -----------------------------------------------------------
+// Pagination
 func getBooksForUser(c *fiber.Ctx) error {
 	log.Println("Request received for /books/recommendations/:userId")
 	log.Printf("Incoming request: %s %s", c.Method(), c.Path())
@@ -127,38 +122,31 @@ func getBooksForUser(c *fiber.Ctx) error {
 	}
 	log.Printf("Received userID: %s", userID)
 
-	userIDInt, err := strconv.Atoi(userID)
-	if err != nil {
+	if _, err := strconv.Atoi(userID); err != nil {
 		log.Printf("Error: Invalid userID: %s", err)
 		return sendResponse(c, nil, "Invalid userID", false)
 	}
 
 	// ตรวจสอบ query parameters
 	offset, _ := strconv.Atoi(c.Query("offset", "0"))
-	limit, _ := strconv.Atoi(c.Query("limit", "20")) // 20 เล่มในหนึ่งครั้ง
+	limit, _ := strconv.Atoi(c.Query("limit", "10"))
 	page := (offset / limit) + 1
 	random := c.Query("random", "false") == "true"
 
 	log.Printf("Pagination - Offset: %d, Limit: %d, Page: %d, Random: %v", offset, limit, page, random)
 
-	// ดึง books ที่ user like แล้ว
-	var likedBookIDs []uint64
-	if err := database.DB.Table("logs").
-		Where("liker_id = ?", userIDInt).
-		Pluck("book_like_id", &likedBookIDs).Error; err != nil {
-		log.Printf("Error fetching liked books: %s", err)
-		return handleError(c, err, "Failed to fetch liked books", 500)
-	}
-	log.Printf("Liked book IDs: %v", likedBookIDs)
-
-	if len(likedBookIDs) == 0 {
-		likedBookIDs = []uint64{0} // ป้องกัน error กรณี likedBookIDs ว่าง
-	}
-
-	// ดึง books ที่ user จะได้เห็นใน stack
 	var books []table.Book
+	// var userGenres []table.UserGenres
+	// var likedBooks []table.Log
+
+	// ดึง Books
 	query := database.DB.Table("books").
-		Where("book_id NOT IN (?)", likedBookIDs). // Exclude already liked books
+		Where("owner_id != ?", userID).                                                                                        // กรองไม่ให้แสดงหนังสือที่ผู้ใช้เป็นเจ้าของ
+		Where("is_traded = false").                                                                                            // กรองไม่ให้แสดงหนังสือที่แลกไปแล้ว
+		Where("book_id NOT IN (?)", database.DB.Table("logs").Select("book_like_id").Where("liker_id = ?", userID)).           // กรองไม่ให้แสดงหนังสือที่ผู้ใช้เคยไลค์
+		Where("genre_id IN (?)", database.DB.Table("user_genres").Select("genre_genre_id").Where("user_user_id = ?", userID)). // กรองหนังสือตามหมวดหมู่ของผู้ใช้
+		Where("book_id NOT IN (?)", database.DB.Table("matches").Select("owner_book_id").Where("matched_user_id = ?", userID)).
+		Where("book_id NOT IN (?)", database.DB.Table("matches").Select("matched_book_id").Where("owner_id = ?", userID)).
 		Offset(offset).
 		Limit(limit)
 
@@ -166,29 +154,10 @@ func getBooksForUser(c *fiber.Ctx) error {
 		query = query.Order("RAND()")
 	}
 
-	// ดึง books
+	// ดึงข้อมูลหนังสือ
 	if err := query.Find(&books).Error; err != nil {
 		log.Printf("Error fetching books: %s", err)
 		return handleError(c, err, "Failed to fetch books", 500)
-	}
-	log.Printf("Books fetched: %v", books)
-
-	// เช็คจำนวนไลค์จาก 20 เล่มใน stack
-	likedBooksCount := 0
-	for _, book := range books {
-		for _, likedBookID := range likedBookIDs {
-			if *book.BookId == likedBookID {
-				likedBooksCount++
-				break
-			}
-		}
-	}
-
-	// เช็คว่าไลค์มากกว่า 50% หรือไม่ (อย่างน้อย 10 เล่ม)
-	if likedBooksCount < 10 {
-		log.Printf("User liked less than 50%% of books in stack: %d liked out of %d", likedBooksCount, limit)
-		// ส่งผลการถามผู้ใช้ว่าจะเปลี่ยน genre หรือไม่
-		return sendResponse(c, nil, "Would you like to change genre?", false)
 	}
 
 	// คำนวณ Pagination
@@ -198,6 +167,8 @@ func getBooksForUser(c *fiber.Ctx) error {
 		return handleError(c, err, "Failed to calculate pagination", 500)
 	}
 
+	// print all of book in 1 stack
+	log.Printf("Books: %v", books)
 	// ส่ง Response กลับ
 	return sendResponse(c, fiber.Map{
 		"books":      books,

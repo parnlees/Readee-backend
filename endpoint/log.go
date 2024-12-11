@@ -28,6 +28,7 @@ func LikeBook(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
 	}
+
 	bookId, err := strconv.Atoi(c.Params("bookId"))
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid book ID"})
@@ -125,7 +126,6 @@ func LikeBook(c *fiber.Ctx) error {
 			tx.Rollback()
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve liked books"})
 		}
-		log.Println("likedBooks are ", likedBooks)
 
 		// Check if there are any mutual likes
 		for range likedBooks {
@@ -175,6 +175,7 @@ func LikeBook(c *fiber.Ctx) error {
 					config.AppCache.Set(matchCacheKey, cachedMatches, cache.DefaultExpiration)
 				}
 			}
+			log.Println("likedBooks are ", likedBooks)
 		}
 	}
 
@@ -186,7 +187,9 @@ func LikeBook(c *fiber.Ctx) error {
 	return c.Status(201).JSON(fiber.Map{"message": "Log created successfully"})
 }
 
-func UnLikeBook(c *fiber.Ctx) error {
+func UnLikeBooks(c *fiber.Ctx) error {
+	log.Println("-----------------UnLikeBooks")
+	// [{"bookId":59,"status":"unliked"},{"bookId":52,"status":"unliked"}]
 	var logEntry table.Log
 
 	userId, err := strconv.ParseUint(c.Params("userId"), 10, 64)
@@ -207,7 +210,6 @@ func UnLikeBook(c *fiber.Ctx) error {
 	if err := database.DB.Create(&logEntry).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to log interaction"})
 	}
-
 	return c.Status(201).JSON(logEntry)
 }
 
