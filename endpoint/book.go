@@ -141,10 +141,11 @@ func getBooksForUser(c *fiber.Ctx) error {
 
 	// ดึง Books
 	query := database.DB.Table("books").
-		Where("owner_id != ?", userID).                                                                                        // กรองไม่ให้แสดงหนังสือที่ผู้ใช้เป็นเจ้าของ
-		Where("is_traded = false").                                                                                            // กรองไม่ให้แสดงหนังสือที่แลกไปแล้ว
-		Where("book_id NOT IN (?)", database.DB.Table("logs").Select("book_like_id").Where("liker_id = ?", userID)).           // กรองไม่ให้แสดงหนังสือที่ผู้ใช้เคยไลค์
-		Where("genre_id IN (?)", database.DB.Table("user_genres").Select("genre_genre_id").Where("user_user_id = ?", userID)). // กรองหนังสือตามหมวดหมู่ของผู้ใช้
+		Where("owner_id != ?", userID).
+		Where("is_traded = false").
+		Where("is_reported = false").
+		Where("book_id NOT IN (?)", database.DB.Table("logs").Select("book_like_id").Where("liker_id = ?", userID)).
+		Where("genre_id IN (?)", database.DB.Table("user_genres").Select("genre_genre_id").Where("user_user_id = ?", userID)).
 		Where("book_id NOT IN (?)", database.DB.Table("matches").Select("owner_book_id").Where("matched_user_id = ?", userID)).
 		Where("book_id NOT IN (?)", database.DB.Table("matches").Select("matched_book_id").Where("owner_id = ?", userID)).
 		Offset(offset).
