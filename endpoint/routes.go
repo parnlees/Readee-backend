@@ -27,6 +27,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Patch("/editBook/:BookId", EditBook)
 	app.Delete("/deleteBook/:BookId", DeleteBook)
 	app.Get("/getBookByUser/:OwnerId", GetBookByOwnerId)
+	app.Get("/reportedBooks/:userId", getReportBook)
 
 	app.Get("/books/recommendations/:userId", getBooksForUser)
 
@@ -98,5 +99,13 @@ func RegisterRoutes(app *fiber.App) {
 		return c.JSON(fiber.Map{"url": url}) // Send the URL as response
 	})
 
+	//ads banner
+	app.Get("/getALlAds", GetAllAds)
+	
+
 	app.Post("/login", Login)
+
+	//Report
+	app.Post("/report/:userId/:bookId", CreateReport)
+	app.Get("/getreport/:bookId", GetReportByBookID)
 }
