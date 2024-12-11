@@ -5,6 +5,7 @@ import (
 	"Readee-Backend/common/database"
 	"Readee-Backend/endpoint"
 	"fmt"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -53,8 +54,12 @@ func main() {
 		})
 	})
 
-	// Start the server
-	err := app.Listen(":3000")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
+	}
+
+	err := app.Listen("0.0.0.0:" + port)
 	if err != nil {
 		panic(err)
 	}
