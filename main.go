@@ -26,6 +26,13 @@ func main() {
 		AllowMethods: "GET,POST,PUT,DELETE,PATCH",
 	}))
 
+	app.Use(func(c *fiber.Ctx) error {
+		// Attach the database instance to the context
+		c.Locals("db", database.DB)
+		return c.Next()
+	})
+	
+
 	// Register all routes
 	endpoint.RegisterRoutes(app)
 

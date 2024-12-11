@@ -108,4 +108,9 @@ func RegisterRoutes(app *fiber.App) {
 	//Report
 	app.Post("/report/:userId/:bookId", CreateReport)
 	app.Get("/getreport/:bookId", GetReportByBookID)
+
+	//Notification
+	app.Post("/notifications", CreateNotificationHandler)
+	app.Get("/notifications/:receiver_id", GetNotificationsHandler)
+	
 }
