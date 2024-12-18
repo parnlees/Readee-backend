@@ -66,3 +66,5 @@ func Init() {
 	// cc.DB.AutoMigrate(&table.Banners{})
 	// cc.DB.AutoMigrate(&table.Banners_display{})
 }
+
+

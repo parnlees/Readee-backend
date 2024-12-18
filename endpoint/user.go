@@ -1,14 +1,46 @@
 package endpoint
 
 import (
+	"Readee-Backend/common/config"
 	"Readee-Backend/common/database"
 	"Readee-Backend/type/table"
 	"log"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/patrickmn/go-cache"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// Cache
+func GetUserWithCache(userID string) (*table.User, string, error) {
+	// Try to fetch from cache
+	cachedUser, found := config.AppCache.Get(userID)
+	if found {
+		user, ok := cachedUser.(*table.User)
+		if ok {
+			return user, "cache", nil
+		}
+		log.Println("Cache error: cached data invalid")
+	}
+
+	// Convert userID to uint64
+	userId, err := strconv.ParseUint(userID, 10, 64)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Fetch from database
+	var user table.User
+	if err := database.DB.First(&user, userId).Error; err != nil {
+		return nil, "database", err
+	}
+
+	// Cache the result
+	config.AppCache.Set(userID, &user, cache.DefaultExpiration)
+
+	return &user, "database", nil
+}
 
 // All
 func GetUsers(c *fiber.Ctx) error {
@@ -35,7 +67,10 @@ func GetUserSpecific(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	return c.JSON(user)
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"user":   user,
+	})
 }
 
 func CreateUser(c *fiber.Ctx) error {
